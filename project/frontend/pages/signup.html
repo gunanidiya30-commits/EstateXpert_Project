@@ -17,21 +17,24 @@
     </header>
 
     <div class="container">
-        <h2>Create New Account</h2>
+    <h2>Create New Account</h2>
 
-        <input id="signupName" type="text" placeholder="Name">
+    <form id="signupForm">
+        <input id="name" type="text" placeholder="Name" required>
         <br><br>
 
-        <input id="signupEmail" type="email" placeholder="Email">
+        <input id="email" type="email" placeholder="Email" required>
         <br><br>
 
-        <input id="signupPassword" type="password" placeholder="Password">
+        <input id="password" type="password" placeholder="Password" required>
         <br><br>
 
-        <button id="signupBtn">Sign Up</button>
+        <button type="submit">Sign Up</button>
 
-        <p id="signupStatus"></p>
-    </div>
+        <p id="result" style="margin-top: 10px;"></p>
+    </form>
+</div>
+
 
     <script src="../js/signup.js"></script>
 
