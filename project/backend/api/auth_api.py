@@ -5,7 +5,7 @@ import bcrypt
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 # -----------------------------
-# SIGNUP ROUTE  (SAFE + FIXED)
+# SIGNUP ROUTE
 # -----------------------------
 @auth_bp.route('/signup', methods=['POST'])
 def signup():
@@ -14,7 +14,6 @@ def signup():
     email = data.get("email")
     password = data.get("password")
 
-    # Hash password (important security fix)
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
     try:
@@ -37,55 +36,49 @@ def signup():
         except:
             pass
 
+
 # -----------------------------
-# LOGIN ROUTE (SAFE + FIXED)
+# LOGIN ROUTE
 # -----------------------------
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
+
     email = data.get("email")
     password = data.get("password")
 
-    # Input validation
     if not email or not password:
-        return jsonify({"status": "fail", "message": "Email and password required"}), 400
+        return jsonify({"error": "Email and password are required"}), 400
 
     try:
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-
-        sql = "SELECT id, name, email, password FROM users WHERE email=%s"
-        cursor.execute(sql, (email,))
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, email, password FROM users WHERE email=%s", (email,))
         user = cursor.fetchone()
-
-        # If email not found
-        if not user:
-            return jsonify({"status": "fail", "message": "Invalid email or password"}), 401
-
-        stored_hash = user["password"]
-
-        # bcrypt password match
-        import bcrypt
-        if bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8")):
-            return jsonify({
-                "status": "success",
-                "message": "Login successful",
-                "user": {
-                    "id": user["id"],
-                    "name": user["name"],
-                    "email": user["email"]
-                }
-            }), 200
-
-        # Password incorrect
-        return jsonify({"status": "fail", "message": "Invalid email or password"}), 401
-
+        conn.close()
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-    finally:
-        try:
-            cursor.close()
-            conn.close()
-        except:
-            pass
+    if not user:
+        return jsonify({"error": "Invalid email or password"}), 401
+
+    user_id = user[0]
+    name = user[1]
+    email = user[2]
+    stored_hash = user[3]
+
+    if isinstance(stored_hash, str):
+        stored_hash = stored_hash.encode("utf-8")
+
+    if not bcrypt.checkpw(password.encode('utf-8'), stored_hash):
+        return jsonify({"error": "Invalid email or password"}), 401
+
+    # SUCCESS
+    return jsonify({
+        "message": "Login successful",
+        "user": {
+            "id": user_id,
+            "name": name,
+            "email": email
+        }
+    }), 200

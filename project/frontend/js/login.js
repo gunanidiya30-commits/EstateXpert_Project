@@ -17,9 +17,11 @@ document.getElementById("loginBtn").addEventListener("click", async function () 
         if (response.ok) {
             resultBox.style.color = "green";
             resultBox.innerText = "Login successful! Redirecting...";
+            localStorage.setItem("user", JSON.stringify(data.user));
+
 
             setTimeout(() => {
-                window.location.href = "../index.html";
+                window.location.href = "../dashboard.html";
 
 
             }, 1500);
