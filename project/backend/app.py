@@ -1,6 +1,7 @@
 from flask import Flask, jsonify
-from db import get_db_connection
-from api.users_api import users_api
+from backend.db import get_db_connection
+from backend.api.users_api import users_api
+from backend.api.auth_api import auth_bp
 from flask_cors import CORS
 
 
@@ -29,6 +30,7 @@ def home():
     return "Backend running successfully"
 
 app.register_blueprint(users_api, url_prefix="/api")
+app.register_blueprint(auth_bp)
 
 if __name__ == "__main__":
     app.run(debug=True)

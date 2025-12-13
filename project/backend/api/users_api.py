@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
-from db import get_db_connection
+from backend.db import get_db_connection   # FIXED IMPORT
 
-users_api = Blueprint("users_api", __name__)
+users_api = Blueprint('users', __name__, url_prefix='/api')
 
 @users_api.route("/users", methods=["GET"])
 def get_users():
@@ -68,8 +68,8 @@ def update_user(user_id):
     cursor = conn.cursor()
 
     sql = """
-        UPDATE users 
-        SET name = %s, email = %s, password = %s 
+        UPDATE users
+        SET name = %s, email = %s, password = %s
         WHERE id = %s
     """
     values = (name, email, password, user_id)
