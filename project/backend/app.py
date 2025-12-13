@@ -1,9 +1,12 @@
 from flask import Flask, jsonify
 from db import get_db_connection
 from api.users_api import users_api
+from flask_cors import CORS
 
 
 app = Flask(__name__)
+CORS(app)
+
 
 @app.route("/test-db")
 def test_db():
