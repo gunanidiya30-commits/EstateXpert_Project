@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Property</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+    <header class="navbar">
+        <h1>EstateXpert</h1>
+        <nav>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="add_property.html">Add Property</a>
+            <a href="login.html" onclick="localStorage.clear()">Logout</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <h2>Add New Property</h2>
+
+        <input id="propTitle" type="text" placeholder="Title"><br><br>
+        <input id="propPrice" type="number" placeholder="Price"><br><br>
+        <input id="propLocation" type="text" placeholder="Location"><br><br>
+        <textarea id="propDescription" placeholder="Description"></textarea><br><br>
+
+        <button id="addPropBtn">Add Property</button>
+
+        <p id="propStatus"></p>
+    </div>
+
+    <script src="js/add_property.js"></script>
+</body>
+</html>
