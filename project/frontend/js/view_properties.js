@@ -27,7 +27,11 @@ async function loadProperties() {
                 <span class="date">Added on: ${p.created_at}</span>
 
                 <button class="delete-btn" onclick="deleteProperty(${p.id})">Delete</button>
+
+                <button class="edit-btn" onclick="editProperty(${p.id})">Edit</button>
+
             </div>
+            
         `;
 
         container.innerHTML += card;   // 🔥 THIS WAS MISSING
@@ -52,6 +56,10 @@ async function deleteProperty(id) {
     }
 }
 
+function editProperty(id) {
+    localStorage.setItem("edit_property_id", id);
+    window.location.href = "edit_property.html";
+}
 
 // Load properties on page load
 loadProperties();
