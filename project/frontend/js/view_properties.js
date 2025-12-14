@@ -12,7 +12,7 @@ async function loadProperties() {
 
     container.innerHTML = "";
 
-    if (data.length === 0) {
+    if (!Array.isArray(data) || data.length === 0) {
         container.innerHTML = "<p>No properties added yet.</p>";
         return;
     }
@@ -25,13 +25,35 @@ async function loadProperties() {
                 <p><b>Location:</b> ${p.location}</p>
                 <p>${p.description}</p>
                 <span class="date">Added on: ${p.created_at}</span>
+
+                <button class="delete-btn" onclick="deleteProperty(${p.id})">Delete</button>
             </div>
         `;
-        container.innerHTML += card;
+
+        container.innerHTML += card;   // 🔥 THIS WAS MISSING
     });
 }
 
-// Load on page start
+async function deleteProperty(id) {
+    const confirmDelete = confirm("Are you sure you want to delete this property?");
+    if (!confirmDelete) return;
+
+    const response = await fetch(`http://127.0.0.1:5000/delete_property/${id}`, {
+        method: "DELETE"
+    });
+
+    const result = await response.json();
+
+    if (result.message) {
+        alert("Property deleted successfully!");
+        loadProperties();  // refresh the list
+    } else {
+        alert("Error deleting property.");
+    }
+}
+
+
+// Load properties on page load
 loadProperties();
 
 // Logout

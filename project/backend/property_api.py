@@ -50,11 +50,13 @@ def get_properties(user_id):
 
         sql = "SELECT * FROM properties WHERE user_id = %s ORDER BY id DESC"
         cursor.execute(sql, (user_id,))
-        properties = cursor.fetchall()
 
-        return jsonify({"properties": properties})
+        properties = cursor.fetchall()
+        return jsonify(properties)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
 
 

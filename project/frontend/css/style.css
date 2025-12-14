@@ -237,3 +237,17 @@ button:hover {
     margin-top: 8px;
     display: block;
 }
+
+.delete-btn {
+    background-color: #e53935;
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 8px;
+}
+.delete-btn:hover {
+    background-color: #c62828;
+}
+
