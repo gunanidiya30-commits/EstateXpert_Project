@@ -40,17 +40,21 @@ def add_property():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+
 @property_api.route("/get_properties/<int:user_id>", methods=["GET"])
 def get_properties(user_id):
     try:
         db = get_db()
         cursor = db.cursor(dictionary=True)
 
-        query = "SELECT * FROM properties WHERE user_id = %s ORDER BY created_at DESC"
-        cursor.execute(query, (user_id,))
-        result = cursor.fetchall()
+        sql = "SELECT * FROM properties WHERE user_id = %s ORDER BY id DESC"
+        cursor.execute(sql, (user_id,))
+        properties = cursor.fetchall()
 
-        return jsonify({"properties": result})
+        return jsonify({"properties": properties})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+

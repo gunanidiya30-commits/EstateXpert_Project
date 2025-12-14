@@ -3,6 +3,26 @@
 <head>
     <title>Dashboard - EstateXpert</title>
     <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        .property-card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+
+        .property-card h3 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .property-card p {
+            margin: 5px 0;
+            color: #555;
+        }
+    </style>
 </head>
 <body>
 
@@ -17,6 +37,12 @@
     <div class="container">
         <h2>Welcome, <span id="userName">User</span> 👋</h2>
         <p>You are successfully logged in!</p>
+    </div>
+
+    <h2>Your Properties</h2>
+
+    <div id="propertyList" class="property-list">
+        <!-- Cards load here -->
     </div>
 
     <script src="js/dashboard.js"></script>
