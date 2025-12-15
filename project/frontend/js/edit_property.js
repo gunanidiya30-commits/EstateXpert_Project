@@ -37,3 +37,29 @@ document.getElementById("editPropertyForm").addEventListener("submit", function 
             window.location.href = "view_properties.html";
         });
 });
+
+
+// After updateProperty() success, before redirect:
+
+const imageFile = document.getElementById("newImage").files[0];
+
+if (imageFile) {
+    const id = localStorage.getItem("edit_property_id");
+    const formData = new FormData();
+    formData.append("image", imageFile);
+
+    fetch(`http://127.0.0.1:5000/upload_image/${id}`, {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.json())
+    .then(imgData => {
+        console.log("Image updated:", imgData);
+        alert("Property updated successfully!");
+        window.location.href = "view_properties.html";
+    });
+} else {
+    // No new image → just redirect normally
+    alert("Property updated successfully!");
+    window.location.href = "view_properties.html";
+}

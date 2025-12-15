@@ -18,8 +18,18 @@ async function loadProperties() {
     }
 
     data.forEach(p => {
+
+        // 🔥 Set image source (use uploaded image or default fallback)
+        const imgSrc = p.image 
+            ? `http://127.0.0.1:5000/uploads/${p.image}`
+            : "default.jpg";   // You can replace this with your own fallback image
+
+        // 🔥 Updated card with image included
         const card = `
             <div class="property-card">
+
+                <img src="${imgSrc}" class="property-image" alt="Property Image">
+
                 <h3>${p.title}</h3>
                 <p><b>Price:</b> ₹${p.price}</p>
                 <p><b>Location:</b> ${p.location}</p>
@@ -27,14 +37,12 @@ async function loadProperties() {
                 <span class="date">Added on: ${p.created_at}</span>
 
                 <button class="delete-btn" onclick="deleteProperty(${p.id})">Delete</button>
-
                 <button class="edit-btn" onclick="editProperty(${p.id})">Edit</button>
 
             </div>
-            
         `;
 
-        container.innerHTML += card;   // 🔥 THIS WAS MISSING
+        container.innerHTML += card;
     });
 }
 
