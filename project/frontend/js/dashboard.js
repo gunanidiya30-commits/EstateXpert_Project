@@ -3,7 +3,7 @@ const user = JSON.parse(localStorage.getItem("user"));
 
 if (!user) {
     alert("Please login first!");
-    window.location.href = "login.html";
+    window.location.href = "frontend/pages/login.html";
 } else {
     document.getElementById("userName").innerText = user.name;
 }
@@ -54,5 +54,5 @@ async function deleteProperty(id) {
 // LOGOUT
 document.getElementById("logoutBtn").addEventListener("click", () => {
     localStorage.removeItem("user");
-    window.location.href = "login.html";
+    window.location.href = "/frontend/pages/login.html";
 });

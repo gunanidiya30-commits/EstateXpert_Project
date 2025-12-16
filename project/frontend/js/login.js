@@ -1,36 +1,32 @@
-document.getElementById("loginBtn").addEventListener("click", async function () {
+document.getElementById("loginBtn").addEventListener("click", async () => {
     const email = document.getElementById("loginEmail").value.trim();
     const password = document.getElementById("loginPassword").value.trim();
 
-    const resultBox = document.getElementById("loginStatus");
-    resultBox.innerText = "Checking...";
+    if (!email || !password) {
+        alert("Please enter email and password");
+        return;
+    }
 
     try {
-        const response = await fetch("http://127.0.0.1:5000/api/auth/login", {
+        const res = await fetch("http://127.0.0.1:5000/api/auth/login", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json"
+            },
             body: JSON.stringify({ email, password })
         });
 
-        const data = await response.json();
+        const data = await res.json();
 
-        if (response.ok) {
-            resultBox.style.color = "green";
-            resultBox.innerText = "Login successful! Redirecting...";
+        if (res.ok && data.user) {
             localStorage.setItem("user", JSON.stringify(data.user));
-
-
-            setTimeout(() => {
-                window.location.href = "../dashboard.html";
-
-
-            }, 1500);
+            window.location.href = "dashboard.html";
         } else {
-            resultBox.style.color = "red";
-            resultBox.innerText = data.error || "Invalid email or password!";
+            alert(data.message || "Login failed");
         }
+
     } catch (err) {
-        resultBox.style.color = "red";
-        resultBox.innerText = "Server offline.";
+        console.error("Login error:", err);
+        alert("Backend not reachable");
     }
 });
