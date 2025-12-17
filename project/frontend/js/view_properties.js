@@ -39,11 +39,17 @@ function renderProperties(list) {
                 <p>${p.description}</p>
                 <span class="date">Added on: ${p.created_at}</span>
 
+                <button onclick="viewDetails(${p.id})">View Details</button>
                 <button class="delete-btn" onclick="deleteProperty(${p.id})">Delete</button>
                 <button class="edit-btn" onclick="editProperty(${p.id})">Edit</button>
             </div>
         `;
     });
+}
+
+function viewDetails(id) {
+    localStorage.setItem("details_id", id);
+    window.location.href = "property_details.html";
 }
 
 async function deleteProperty(id) {

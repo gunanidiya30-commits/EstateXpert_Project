@@ -117,3 +117,22 @@ def update_property(property_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@property_api.route("/property/<int:property_id>", methods=["GET"])
+def get_single_property(property_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    
+    cursor.execute(
+        "SELECT * FROM properties WHERE id = %s",
+        (property_id,)
+    )
+
+    property_data = cursor.fetchone()
+    cursor.close()
+
+    if not property_data:
+        return jsonify({"error": "Property not found"}), 404
+
+    return jsonify(property_data), 200
+
