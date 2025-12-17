@@ -18,18 +18,13 @@ async function loadProperties() {
     }
 
     data.forEach(p => {
-
-        // 🔥 Set image source (use uploaded image or default fallback)
-        const imgSrc = p.image 
+        const imgSrc = p.image
             ? `http://127.0.0.1:5000/uploads/${p.image}`
-            : "default.jpg";   // You can replace this with your own fallback image
+            : "default.jpg";
 
-        // 🔥 Updated card with image included
         const card = `
             <div class="property-card">
-
                 <img src="${imgSrc}" class="property-image" alt="Property Image">
-
                 <h3>${p.title}</h3>
                 <p><b>Price:</b> ₹${p.price}</p>
                 <p><b>Location:</b> ${p.location}</p>
@@ -38,7 +33,6 @@ async function loadProperties() {
 
                 <button class="delete-btn" onclick="deleteProperty(${p.id})">Delete</button>
                 <button class="edit-btn" onclick="editProperty(${p.id})">Edit</button>
-
             </div>
         `;
 
@@ -58,7 +52,7 @@ async function deleteProperty(id) {
 
     if (result.message) {
         alert("Property deleted successfully!");
-        loadProperties();  // refresh the list
+        loadProperties();
     } else {
         alert("Error deleting property.");
     }
@@ -71,6 +65,27 @@ function editProperty(id) {
 
 // Load properties on page load
 loadProperties();
+
+// 🔍 Real‑time Search Filtering
+document.getElementById('searchInput').addEventListener('keyup', function () {
+    let query = this.value.toLowerCase().trim();
+    let cards = document.getElementsByClassName('property-card');
+
+    let found = false; // Track if any card matches
+
+    for (let card of cards) {
+        let text = card.innerText.toLowerCase();
+        let match = text.includes(query);
+
+        card.style.display = match ? "block" : "none";
+
+        if (match) found = true;
+    }
+
+    // Show / Hide "No Results" message
+    document.getElementById("noResults").style.display = found ? "none" : "block";
+});
+
 
 // Logout
 document.getElementById("logoutBtn").onclick = () => {

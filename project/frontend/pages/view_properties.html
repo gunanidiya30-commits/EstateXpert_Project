@@ -20,10 +20,19 @@
 <div class="container">
     <h2>My Properties</h2>
 
+    <!-- ✅ Add search bar here -->
+    <input type="text" id="searchInput" placeholder="Search properties..." class="search-box">
+
+    <!-- ✅ Add “No Results Found” message HERE -->
+    <p id="noResults" style="text-align:center; display:none; color:#777; font-size:18px; margin-top:10px;">
+        No properties match your search.
+    </p>
+    
     <div id="propertyContainer" class="card-container">
         <!-- Property cards will load here -->
     </div>
 </div>
+
 
 <script src="../js/view_properties.js"></script>
 <script src="../js/main.js"></script>

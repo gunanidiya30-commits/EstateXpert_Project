@@ -1,6 +1,6 @@
 import os
 from werkzeug.utils import secure_filename
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from backend.db import get_db_connection
 from backend.api.users_api import users_api
 from backend.api.auth_api import auth_bp
@@ -11,6 +11,7 @@ from flask_cors import CORS
 
 
 app = Flask(__name__)
+CORS(app)
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
@@ -18,11 +19,8 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
-CORS(
-    app,
-    resources={r"/api/*": {"origins": "*"}},
-    supports_credentials=True
-)
+
+
 
 
 @app.route("/test-db")
