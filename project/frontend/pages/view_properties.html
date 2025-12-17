@@ -23,11 +23,22 @@
     <!-- ✅ Add search bar here -->
     <input type="text" id="searchInput" placeholder="Search properties..." class="search-box">
 
+    <select id="sortSelect" class="sort-box">
+    <option value="">Sort by</option>
+    <option value="priceAsc">Price: Low to High</option>
+    <option value="priceDesc">Price: High to Low</option>
+    <option value="nameAsc">Name: A to Z</option>
+    <option value="nameDesc">Name: Z to A</option>
+    <option value="newest">Newest First</option>
+    <option value="oldest">Oldest First</option>
+</select>
+
+
     <!-- ✅ Add “No Results Found” message HERE -->
     <p id="noResults" style="text-align:center; display:none; color:#777; font-size:18px; margin-top:10px;">
         No properties match your search.
     </p>
-    
+
     <div id="propertyContainer" class="card-container">
         <!-- Property cards will load here -->
     </div>
