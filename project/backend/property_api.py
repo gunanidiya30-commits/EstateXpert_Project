@@ -1,7 +1,32 @@
+import os
+from werkzeug.utils import secure_filename
 from flask import Blueprint, request, jsonify
 from backend.db import get_db_connection
 
 property_api = Blueprint("property_api", __name__)
+
+UPLOAD_FOLDER = "backend/uploads"
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def add_property_image(property_id, image_path, is_primary=False):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        INSERT INTO property_images (property_id, image_path, is_primary)
+        VALUES (%s, %s, %s)
+        """,
+        (property_id, image_path, is_primary)
+    )
+
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 # ---------------------------
 # ADD PROPERTY (JSON BASED)
@@ -9,7 +34,7 @@ property_api = Blueprint("property_api", __name__)
 @property_api.route("/add_property", methods=["POST"])
 def add_property():
     try:
-        data = request.get_json()
+        data = request.form
 
         title = data.get("title")
         price = data.get("price")
@@ -27,35 +52,28 @@ def add_property():
         cursor.execute(sql, (title, price, location, description, user_id))
         conn.commit()
 
+        # 🔽 THIS MUST BE INSIDE try (INDENTED)
+        property_id = cursor.lastrowid
+
+        if "images" in request.files:
+            images = request.files.getlist("images")
+
+            for index, image in enumerate(images):
+                if image and allowed_file(image.filename):
+                    filename = secure_filename(image.filename)
+                    image_path = os.path.join(UPLOAD_FOLDER, filename)
+                    image.save(image_path)
+
+                    add_property_image(
+                        property_id,
+                        image_path,
+                        is_primary=(index == 0)
+                    )
+
         cursor.close()
         conn.close()
 
         return jsonify({"message": "Property added successfully!"})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# ---------------------------
-# GET PROPERTIES BY USER
-# ---------------------------
-@property_api.route("/get_properties/<int:user_id>", methods=["GET"])
-def get_properties(user_id):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-
-        cursor.execute(
-            "SELECT * FROM properties WHERE user_id = %s ORDER BY id DESC",
-            (user_id,)
-        )
-
-        properties = cursor.fetchall()
-
-        cursor.close()
-        conn.close()
-
-        return jsonify(properties)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
