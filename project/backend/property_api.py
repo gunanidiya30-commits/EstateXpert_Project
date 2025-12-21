@@ -27,10 +27,7 @@ def add_property_image(property_id, image_path, is_primary=False):
     cursor.close()
     conn.close()
 
-# ---------------------------
-# ADD PROPERTY
-# ---------------------------
-# ---------------------------
+
 # ADD PROPERTY
 # ---------------------------
 @property_api.route("/add_property", methods=["POST"])
@@ -125,9 +122,15 @@ def get_property(property_id):
         cursor = conn.cursor(dictionary=True)
 
         cursor.execute(
-            "SELECT * FROM properties WHERE id = %s",
-            (property_id,)
-        )
+    """
+    SELECT image_path
+    FROM property_images
+    WHERE property_id = %s
+    ORDER BY display_order ASC, id ASC
+    """,
+    (property_id,)
+)
+
         property_data = cursor.fetchone()
 
         if not property_data:
