@@ -285,3 +285,24 @@ button:hover {
 }
 
 
+.property-thumb {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+
+.image-gallery {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  margin-bottom: 15px;
+}
+
+.detail-image {
+  height: 200px;
+  border-radius: 6px;
+  object-fit: cover;
+}

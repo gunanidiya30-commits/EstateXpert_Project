@@ -11,7 +11,6 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
 def add_property_image(property_id, image_path, is_primary=False):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -29,7 +28,10 @@ def add_property_image(property_id, image_path, is_primary=False):
     conn.close()
 
 # ---------------------------
-# ADD PROPERTY (JSON BASED)
+# ADD PROPERTY
+# ---------------------------
+# ---------------------------
+# ADD PROPERTY
 # ---------------------------
 @property_api.route("/add_property", methods=["POST"])
 def add_property():
@@ -45,14 +47,15 @@ def add_property():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        sql = """
+        cursor.execute(
+            """
             INSERT INTO properties (title, price, location, description, user_id)
             VALUES (%s, %s, %s, %s, %s)
-        """
-        cursor.execute(sql, (title, price, location, description, user_id))
+            """,
+            (title, price, location, description, user_id)
+        )
         conn.commit()
 
-        # 🔽 THIS MUST BE INSIDE try (INDENTED)
         property_id = cursor.lastrowid
 
         if "images" in request.files:
@@ -61,8 +64,12 @@ def add_property():
             for index, image in enumerate(images):
                 if image and allowed_file(image.filename):
                     filename = secure_filename(image.filename)
-                    image_path = os.path.join(UPLOAD_FOLDER, filename)
-                    image.save(image_path)
+
+                    image_path = f"/uploads/{filename}"
+
+                    image.save(save_path)
+
+                    image_path = f"/uploads/{filename}"
 
                     add_property_image(
                         property_id,
@@ -78,9 +85,38 @@ def add_property():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ---------------------------
+# GET PROPERTIES BY USER (WITH THUMBNAIL)
+# ---------------------------
+@property_api.route("/get_properties/<int:user_id>", methods=["GET"])
+def get_properties(user_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT 
+                p.*,
+                pi.image_path AS thumbnail
+            FROM properties p
+            LEFT JOIN property_images pi
+                ON p.id = pi.property_id AND pi.is_primary = TRUE
+            WHERE p.user_id = %s
+            ORDER BY p.id DESC
+        """, (user_id,))
+
+        properties = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify(properties)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ---------------------------
-# GET SINGLE PROPERTY
+# GET SINGLE PROPERTY (WITH IMAGE GALLERY)
 # ---------------------------
 @property_api.route("/get_property/<int:property_id>", methods=["GET"])
 def get_property(property_id):
@@ -92,17 +128,26 @@ def get_property(property_id):
             "SELECT * FROM properties WHERE id = %s",
             (property_id,)
         )
+        property_data = cursor.fetchone()
 
-        prop = cursor.fetchone()
+        if not property_data:
+            return jsonify({"error": "Property not found"}), 404
+
+        cursor.execute(
+            "SELECT image_path FROM property_images WHERE property_id = %s",
+            (property_id,)
+        )
+        images = cursor.fetchall()
+
+        property_data["images"] = [img["image_path"] for img in images]
 
         cursor.close()
         conn.close()
 
-        return jsonify(prop)
+        return jsonify(property_data)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 # ---------------------------
 # UPDATE PROPERTY
@@ -127,7 +172,6 @@ def update_property(property_id):
         """, (title, price, location, description, property_id))
 
         conn.commit()
-
         cursor.close()
         conn.close()
 
@@ -135,22 +179,3 @@ def update_property(property_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-@property_api.route("/property/<int:property_id>", methods=["GET"])
-def get_single_property(property_id):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    
-    cursor.execute(
-        "SELECT * FROM properties WHERE id = %s",
-        (property_id,)
-    )
-
-    property_data = cursor.fetchone()
-    cursor.close()
-
-    if not property_data:
-        return jsonify({"error": "Property not found"}), 404
-
-    return jsonify(property_data), 200
-

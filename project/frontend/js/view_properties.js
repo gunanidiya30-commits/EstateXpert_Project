@@ -26,9 +26,10 @@ function renderProperties(list) {
     }
 
     list.forEach(p => {
-        const imgSrc = p.image
-            ? `http://127.0.0.1:5000/uploads/${p.image}`
-            : "default.jpg";
+       const imgSrc = p.thumbnail
+    ? `http://127.0.0.1:5000/${p.thumbnail}`
+    : "assets/no-image.jpg";
+
 
         container.innerHTML += `
             <div class="property-card">
@@ -49,8 +50,9 @@ function renderProperties(list) {
 
 function viewDetails(id) {
     localStorage.setItem("details_id", id);
-    window.location.href = "property_details.html";
+    window.location.href = `property_details.html?id=${id}`;
 }
+
 
 async function deleteProperty(id) {
     const confirmDelete = confirm("Are you sure you want to delete this property?");

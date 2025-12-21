@@ -12,7 +12,8 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = os.path.join(os.getcwd(), "backend/uploads")
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -44,31 +45,13 @@ def home():
     return "Backend running successfully"
 
 
-@app.route('/upload_image/<int:property_id>', methods=['POST'])
-def upload_image(property_id):
-    if 'image' not in request.files:
-        return jsonify({"error": "No image uploaded"}), 400
 
-    image = request.files['image']          # get uploaded file
-    filename = secure_filename(image.filename)  # clean file name
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-
-    image.save(filepath)    # save file to uploads/
-
-    # Save filename to database (not full path)
-    cursor = mysql.connection.cursor()
-    cursor.execute(
-        "UPDATE properties SET image=%s WHERE id=%s",
-        (filename, property_id)
-    )
-    mysql.connection.commit()
-    cursor.close()
-
-    return jsonify({"message": "Image uploaded successfully", "filename": filename})
-
-@app.route('/uploads/<filename>')
+@app.route("/uploads/<path:filename>")
 def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    return send_from_directory(
+        os.path.join(app.root_path, "uploads"),
+        filename
+    )
 
 app.register_blueprint(users_api, url_prefix="/api")
 app.register_blueprint(auth_bp)              # correct
