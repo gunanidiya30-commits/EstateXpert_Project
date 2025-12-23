@@ -118,6 +118,7 @@ def get_properties(user_id):
                 ON p.id = pi.property_id AND pi.is_primary = TRUE
             WHERE p.user_id = %s
               AND p.status = 'available'
+              AND p.is_deleted = 0
             ORDER BY p.id DESC
             """,
             (user_id,),
@@ -234,42 +235,22 @@ def update_property(property_id):
 # ---------------------------
 # DELETE PROPERTY IMAGE
 # ---------------------------
-@property_api.route("/delete_property_image/<int:image_id>", methods=["DELETE"])
-def delete_property_image(image_id):
+@property_api.route("/delete_property/<int:property_id>", methods=["DELETE"])
+def delete_property(property_id):
     try:
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT property_id FROM property_images WHERE id = %s",
-            (image_id,),
-        )
-        image = cursor.fetchone()
-
-        if not image:
-            return jsonify({"error": "Image not found"}), 404
-
-        property_id = image["property_id"]
-
-        cursor.execute(
-            "SELECT COUNT(*) AS count FROM property_images WHERE property_id = %s",
-            (property_id,),
-        )
-        image_count = cursor.fetchone()["count"]
-
-        if image_count <= 1:
-            return jsonify({"error": "A property must have at least one image"}), 400
-
-        cursor.execute(
-            "DELETE FROM property_images WHERE id = %s",
-            (image_id,),
+            "UPDATE properties SET is_deleted = 1 WHERE id = %s",
+            (property_id,)
         )
         conn.commit()
 
         cursor.close()
         conn.close()
 
-        return jsonify({"message": "Image deleted successfully"})
+        return jsonify({"message": "Property deleted successfully"})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
