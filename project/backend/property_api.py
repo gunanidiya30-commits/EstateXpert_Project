@@ -280,3 +280,34 @@ def delete_property(property_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# ---------------------------
+# ADMIN — GET ALL PROPERTIES (Day-23)
+# ---------------------------
+@property_api.route("/admin/get_all_properties", methods=["GET"])
+def admin_get_all_properties():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(
+            """
+            SELECT
+                p.*,
+                pi.image_path AS thumbnail
+            FROM properties p
+            LEFT JOIN property_images pi
+                ON p.id = pi.property_id AND pi.is_primary = TRUE
+            ORDER BY p.id DESC
+            """
+        )
+
+        properties = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify(properties)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
