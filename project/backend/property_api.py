@@ -1,4 +1,5 @@
 import os
+import uuid
 from werkzeug.utils import secure_filename
 from flask import Blueprint, request, jsonify
 from backend.db import get_db_connection
@@ -13,6 +14,11 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 # ---------------------------
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def get_db():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    return conn, cursor
 
 def add_property_image(property_id, image_path, is_primary=False):
     conn = get_db_connection()
@@ -36,11 +42,9 @@ def add_property():
     try:
         data = request.form
 
-        title = data.get("title")
-        price = data.get("price")
-        location = data.get("location")
-        description = data.get("description")
-        user_id = data.get("user_id")
+        required_fields = ["title", "price", "location", "description", "user_id"]
+        if not all(data.get(f) for f in required_fields):
+            return jsonify({"error": "Missing required fields"}), 400
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -50,7 +54,13 @@ def add_property():
             INSERT INTO properties (title, price, location, description, user_id)
             VALUES (%s, %s, %s, %s, %s)
             """,
-            (title, price, location, description, user_id),
+            (
+                data["title"],
+                data["price"],
+                data["location"],
+                data["description"],
+                data["user_id"],
+            ),
         )
         conn.commit()
 
@@ -58,24 +68,22 @@ def add_property():
         saved_images = []
 
         if "images" in request.files:
-            images = request.files.getlist("images")
-            for image in images:
+            for image in request.files.getlist("images"):
                 if image and allowed_file(image.filename):
-                    filename = secure_filename(image.filename)
+                    ext = image.filename.rsplit(".", 1)[1].lower()
+                    filename = secure_filename(f"{uuid.uuid4()}.{ext}")
                     save_path = os.path.join(UPLOAD_FOLDER, filename)
                     image.save(save_path)
 
                     image_path = f"/uploads/{filename}"
-                    add_property_image(property_id, image_path, is_primary=False)
+                    add_property_image(property_id, image_path)
                     saved_images.append(image_path)
 
-        # Day-16 — at least one image required
-        if len(saved_images) == 0:
+        if not saved_images:
             cursor.close()
             conn.close()
             return jsonify({"error": "At least one property image is required"}), 400
 
-        # Day-16 — auto assign primary image
         cursor.execute(
             """
             UPDATE property_images
@@ -91,10 +99,10 @@ def add_property():
         cursor.close()
         conn.close()
 
-        return jsonify({"message": "Property added successfully!"})
+        return jsonify({"message": "Property added successfully!"}), 201
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return jsonify({"error": "Failed to add property"}), 500
 
 # ---------------------------
 # GET PROPERTIES BY USER
@@ -102,14 +110,11 @@ def add_property():
 @property_api.route("/get_properties/<int:user_id>", methods=["GET"])
 def get_properties(user_id):
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        conn, cursor = get_db()
 
         cursor.execute(
             """
-            SELECT
-                p.*,
-                pi.image_path AS thumbnail
+            SELECT p.*, pi.image_path AS thumbnail
             FROM properties p
             LEFT JOIN property_images pi
                 ON p.id = pi.property_id AND pi.is_primary = TRUE
@@ -121,14 +126,14 @@ def get_properties(user_id):
             (user_id,),
         )
 
-        properties = cursor.fetchall()
+        data = cursor.fetchall()
         cursor.close()
         conn.close()
 
-        return jsonify(properties)
+        return jsonify(data)
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return jsonify({"error": "Failed to fetch properties"}), 500
 
 # ---------------------------
 # GET SINGLE PROPERTY
@@ -136,15 +141,10 @@ def get_properties(user_id):
 @property_api.route("/get_property/<int:property_id>", methods=["GET"])
 def get_property(property_id):
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        conn, cursor = get_db()
 
         cursor.execute(
-            """
-            SELECT *
-            FROM properties
-            WHERE id = %s AND is_deleted = 0
-            """,
+            "SELECT * FROM properties WHERE id=%s AND is_deleted=0",
             (property_id,),
         )
         property_data = cursor.fetchone()
@@ -158,25 +158,23 @@ def get_property(property_id):
             """
             SELECT image_path
             FROM property_images
-            WHERE property_id = %s
+            WHERE property_id=%s
             ORDER BY display_order ASC, id ASC
             """,
             (property_id,),
         )
-        images = cursor.fetchall()
 
-        property_data["images"] = [img["image_path"] for img in images]
-
+        property_data["images"] = [img["image_path"] for img in cursor.fetchall()]
         cursor.close()
         conn.close()
 
         return jsonify(property_data)
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return jsonify({"error": "Failed to fetch property"}), 500
 
 # ---------------------------
-# UPDATE PROPERTY STATUS (Day-22)
+# UPDATE PROPERTY STATUS (Day‑22)
 # ---------------------------
 @property_api.route("/update_property_status/<int:property_id>", methods=["POST"])
 def update_property_status(property_id):
@@ -188,15 +186,10 @@ def update_property_status(property_id):
         if new_status not in ["available", "sold", "rented"]:
             return jsonify({"error": "Invalid status"}), 400
 
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        conn, cursor = get_db()
 
         cursor.execute(
-            """
-            SELECT user_id, status
-            FROM properties
-            WHERE id = %s AND is_deleted = 0
-            """,
+            "SELECT user_id, status FROM properties WHERE id=%s AND is_deleted=0",
             (property_id,),
         )
         row = cursor.fetchone()
@@ -219,8 +212,8 @@ def update_property_status(property_id):
         cursor.execute(
             """
             UPDATE properties
-            SET status = %s
-            WHERE id = %s
+            SET status=%s, updated_at=CURRENT_TIMESTAMP
+            WHERE id=%s
             """,
             (new_status, property_id),
         )
@@ -228,11 +221,10 @@ def update_property_status(property_id):
 
         cursor.close()
         conn.close()
-
         return jsonify({"message": "Property status updated successfully"})
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return jsonify({"error": "Failed to update status"}), 500
 
 # ---------------------------
 # DELETE PROPERTY (Soft Delete)
@@ -243,11 +235,10 @@ def delete_property(property_id):
         data = request.get_json()
         user_id = data.get("user_id")
 
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        conn, cursor = get_db()
 
         cursor.execute(
-            "SELECT user_id FROM properties WHERE id = %s AND is_deleted = 0",
+            "SELECT user_id FROM properties WHERE id=%s AND is_deleted=0",
             (property_id,),
         )
         row = cursor.fetchone()
@@ -265,9 +256,8 @@ def delete_property(property_id):
         cursor.execute(
             """
             UPDATE properties
-            SET is_deleted = 1,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = %s
+            SET is_deleted=1, updated_at=CURRENT_TIMESTAMP
+            WHERE id=%s
             """,
             (property_id,),
         )
@@ -275,26 +265,22 @@ def delete_property(property_id):
 
         cursor.close()
         conn.close()
-
         return jsonify({"message": "Property deleted successfully"})
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return jsonify({"error": "Failed to delete property"}), 500
 
 # ---------------------------
-# ADMIN — GET ALL PROPERTIES (Day-23)
+# ADMIN — GET ALL PROPERTIES (Day‑23)
 # ---------------------------
 @property_api.route("/admin/get_all_properties", methods=["GET"])
 def admin_get_all_properties():
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        conn, cursor = get_db()
 
         cursor.execute(
             """
-            SELECT
-                p.*,
-                pi.image_path AS thumbnail
+            SELECT p.*, pi.image_path AS thumbnail
             FROM properties p
             LEFT JOIN property_images pi
                 ON p.id = pi.property_id AND pi.is_primary = TRUE
@@ -303,11 +289,11 @@ def admin_get_all_properties():
             """
         )
 
-        properties = cursor.fetchall()
+        data = cursor.fetchall()
         cursor.close()
         conn.close()
 
-        return jsonify(properties)
+        return jsonify(data)
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return jsonify({"error": "Failed to fetch admin data"}), 500
