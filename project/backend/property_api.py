@@ -71,13 +71,13 @@ def add_property():
                     add_property_image(property_id, image_path, is_primary=False)
                     saved_images.append(image_path)
 
-        # Day-16 Micro-step A
+        # Day-16 Micro-step A — at least one image required
         if len(saved_images) == 0:
             cursor.close()
             conn.close()
             return jsonify({"error": "At least one property image is required"}), 400
 
-        # Day-16 Micro-step B
+        # Day-16 Micro-step B — auto-assign primary image
         cursor.execute(
             """
             UPDATE property_images
@@ -198,13 +198,13 @@ def update_property(property_id):
         )
         current_status = cursor.fetchone()["status"]
 
-        # Day-17 Micro-step C
+        # Day-17 Micro-step C — block edits if not available
         if current_status != "available":
             cursor.close()
             conn.close()
             return jsonify({"error": "Only available properties can be edited"}), 400
 
-        # Day-18 Micro-step C
+        # Day-18 Micro-step C — prevent revert to available
         if current_status in ["sold", "rented"] and new_status == "available":
             cursor.close()
             conn.close()
@@ -216,7 +216,11 @@ def update_property(property_id):
         cursor.execute(
             """
             UPDATE properties
-            SET title=%s, price=%s, location=%s, description=%s, status=%s
+            SET title=%s,
+                price=%s,
+                location=%s,
+                description=%s,
+                status=%s
             WHERE id=%s
             """,
             (title, price, location, description, new_status, property_id),
@@ -233,7 +237,7 @@ def update_property(property_id):
 
 
 # ---------------------------
-# DELETE PROPERTY IMAGE
+# DELETE PROPERTY (SOFT DELETE)
 # ---------------------------
 @property_api.route("/delete_property/<int:property_id>", methods=["DELETE"])
 def delete_property(property_id):
@@ -241,9 +245,15 @@ def delete_property(property_id):
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        # Day-19 + Day-20 — soft delete with updated_at
         cursor.execute(
-            "UPDATE properties SET is_deleted = 1 WHERE id = %s",
-            (property_id,)
+            """
+            UPDATE properties
+            SET is_deleted = 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+            """,
+            (property_id,),
         )
         conn.commit()
 
