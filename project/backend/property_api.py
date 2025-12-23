@@ -14,7 +14,6 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
 def add_property_image(property_id, image_path, is_primary=False):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -28,7 +27,6 @@ def add_property_image(property_id, image_path, is_primary=False):
     conn.commit()
     cursor.close()
     conn.close()
-
 
 # ---------------------------
 # ADD PROPERTY
@@ -71,13 +69,13 @@ def add_property():
                     add_property_image(property_id, image_path, is_primary=False)
                     saved_images.append(image_path)
 
-        # Day-16 Micro-step A — at least one image required
+        # Day-16 — at least one image required
         if len(saved_images) == 0:
             cursor.close()
             conn.close()
             return jsonify({"error": "At least one property image is required"}), 400
 
-        # Day-16 Micro-step B — auto-assign primary image
+        # Day-16 — auto assign primary image
         cursor.execute(
             """
             UPDATE property_images
@@ -97,7 +95,6 @@ def add_property():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 # ---------------------------
 # GET PROPERTIES BY USER
@@ -125,7 +122,6 @@ def get_properties(user_id):
         )
 
         properties = cursor.fetchall()
-
         cursor.close()
         conn.close()
 
@@ -133,7 +129,6 @@ def get_properties(user_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 # ---------------------------
 # GET SINGLE PROPERTY
@@ -145,12 +140,18 @@ def get_property(property_id):
         cursor = conn.cursor(dictionary=True)
 
         cursor.execute(
-            "SELECT * FROM properties WHERE id = %s",
+            """
+            SELECT *
+            FROM properties
+            WHERE id = %s AND is_deleted = 0
+            """,
             (property_id,),
         )
         property_data = cursor.fetchone()
 
         if not property_data:
+            cursor.close()
+            conn.close()
             return jsonify({"error": "Property not found"}), 404
 
         cursor.execute(
@@ -174,7 +175,6 @@ def get_property(property_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 # ---------------------------
 # UPDATE PROPERTY STATUS (Day-22)
 # ---------------------------
@@ -192,7 +192,11 @@ def update_property_status(property_id):
         cursor = conn.cursor(dictionary=True)
 
         cursor.execute(
-            "SELECT user_id, status FROM properties WHERE id = %s",
+            """
+            SELECT user_id, status
+            FROM properties
+            WHERE id = %s AND is_deleted = 0
+            """,
             (property_id,),
         )
         row = cursor.fetchone()
@@ -202,24 +206,22 @@ def update_property_status(property_id):
             conn.close()
             return jsonify({"error": "Property not found"}), 404
 
-        # Day-21 — ownership check
         if row["user_id"] != user_id:
             cursor.close()
             conn.close()
-            return jsonify({"error": "You are not allowed to change this property status"}), 403
+            return jsonify({"error": "Unauthorized"}), 403
 
-        current_status = row["status"]
-
-        # Day-18 — prevent revert
-        if current_status in ["sold", "rented"] and new_status == "available":
+        if row["status"] in ["sold", "rented"] and new_status == "available":
             cursor.close()
             conn.close()
-            return jsonify(
-                {"error": "Completed properties cannot be reverted to available"}
-            ), 400
+            return jsonify({"error": "Cannot revert completed property"}), 400
 
         cursor.execute(
-            "UPDATE properties SET status = %s WHERE id = %s",
+            """
+            UPDATE properties
+            SET status = %s
+            WHERE id = %s
+            """,
             (new_status, property_id),
         )
         conn.commit()
@@ -233,7 +235,7 @@ def update_property_status(property_id):
         return jsonify({"error": str(e)}), 500
 
 # ---------------------------
-# DELETE PROPERTY
+# DELETE PROPERTY (Soft Delete)
 # ---------------------------
 @property_api.route("/delete_property/<int:property_id>", methods=["DELETE"])
 def delete_property(property_id):
@@ -244,9 +246,8 @@ def delete_property(property_id):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Day-21 — ownership check
         cursor.execute(
-            "SELECT user_id FROM properties WHERE id = %s",
+            "SELECT user_id FROM properties WHERE id = %s AND is_deleted = 0",
             (property_id,),
         )
         row = cursor.fetchone()
@@ -259,9 +260,8 @@ def delete_property(property_id):
         if row["user_id"] != user_id:
             cursor.close()
             conn.close()
-            return jsonify({"error": "You are not allowed to delete this property"}), 403
+            return jsonify({"error": "Unauthorized"}), 403
 
-        # Day-19 + Day-20 — soft delete with updated_at
         cursor.execute(
             """
             UPDATE properties
@@ -298,12 +298,12 @@ def admin_get_all_properties():
             FROM properties p
             LEFT JOIN property_images pi
                 ON p.id = pi.property_id AND pi.is_primary = TRUE
+            WHERE p.is_deleted = 0
             ORDER BY p.id DESC
             """
         )
 
         properties = cursor.fetchall()
-
         cursor.close()
         conn.close()
 
