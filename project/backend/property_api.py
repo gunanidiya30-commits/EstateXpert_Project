@@ -18,7 +18,6 @@ def allowed_file(filename):
 def add_property_image(property_id, image_path, is_primary=False):
     conn = get_db_connection()
     cursor = conn.cursor()
-
     cursor.execute(
         """
         INSERT INTO property_images (property_id, image_path, is_primary)
@@ -26,7 +25,6 @@ def add_property_image(property_id, image_path, is_primary=False):
         """,
         (property_id, image_path, is_primary),
     )
-
     conn.commit()
     cursor.close()
     conn.close()
@@ -59,12 +57,10 @@ def add_property():
         conn.commit()
 
         property_id = cursor.lastrowid
-
         saved_images = []
 
         if "images" in request.files:
             images = request.files.getlist("images")
-
             for image in images:
                 if image and allowed_file(image.filename):
                     filename = secure_filename(image.filename)
@@ -72,13 +68,7 @@ def add_property():
                     image.save(save_path)
 
                     image_path = f"/uploads/{filename}"
-
-                    add_property_image(
-                        property_id,
-                        image_path,
-                        is_primary=False,
-                    )
-
+                    add_property_image(property_id, image_path, is_primary=False)
                     saved_images.append(image_path)
 
         # Day-16 Micro-step A
@@ -127,6 +117,7 @@ def get_properties(user_id):
             LEFT JOIN property_images pi
                 ON p.id = pi.property_id AND pi.is_primary = TRUE
             WHERE p.user_id = %s
+              AND p.status = 'available'
             ORDER BY p.id DESC
             """,
             (user_id,),
@@ -195,30 +186,39 @@ def update_property(property_id):
         price = data.get("price")
         location = data.get("location")
         description = data.get("description")
+        new_status = data.get("status")
 
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Day-17 Micro-step C
         cursor.execute(
             "SELECT status FROM properties WHERE id = %s",
             (property_id,),
         )
-        status = cursor.fetchone()["status"]
+        current_status = cursor.fetchone()["status"]
 
-        if status != "available":
+        # Day-17 Micro-step C
+        if current_status != "available":
             cursor.close()
             conn.close()
             return jsonify({"error": "Only available properties can be edited"}), 400
+
+        # Day-18 Micro-step C
+        if current_status in ["sold", "rented"] and new_status == "available":
+            cursor.close()
+            conn.close()
+            return jsonify(
+                {"error": "Completed properties cannot be reverted to available"}
+            ), 400
 
         cursor = conn.cursor()
         cursor.execute(
             """
             UPDATE properties
-            SET title=%s, price=%s, location=%s, description=%s
+            SET title=%s, price=%s, location=%s, description=%s, status=%s
             WHERE id=%s
             """,
-            (title, price, location, description, property_id),
+            (title, price, location, description, new_status, property_id),
         )
 
         conn.commit()
