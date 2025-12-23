@@ -188,23 +188,39 @@ def update_property(property_id):
         location = data.get("location")
         description = data.get("description")
         new_status = data.get("status")
+        user_id = data.get("user_id")  # needed for Day-21
 
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
+        # Fetch current status + owner
         cursor.execute(
-            "SELECT status FROM properties WHERE id = %s",
+            "SELECT status, user_id FROM properties WHERE id = %s",
             (property_id,),
         )
-        current_status = cursor.fetchone()["status"]
+        row = cursor.fetchone()
 
-        # Day-17 Micro-step C — block edits if not available
+        if not row:
+            cursor.close()
+            conn.close()
+            return jsonify({"error": "Property not found"}), 404
+
+        current_status = row["status"]
+        owner_id = row["user_id"]
+
+        # Day-21 — ownership check
+        if owner_id != user_id:
+            cursor.close()
+            conn.close()
+            return jsonify({"error": "You are not allowed to edit this property"}), 403
+
+        # Day-17 — block edits if not available
         if current_status != "available":
             cursor.close()
             conn.close()
             return jsonify({"error": "Only available properties can be edited"}), 400
 
-        # Day-18 Micro-step C — prevent revert to available
+        # Day-18 — prevent revert
         if current_status in ["sold", "rented"] and new_status == "available":
             cursor.close()
             conn.close()
@@ -212,7 +228,7 @@ def update_property(property_id):
                 {"error": "Completed properties cannot be reverted to available"}
             ), 400
 
-        cursor = conn.cursor()
+        # Perform update
         cursor.execute(
             """
             UPDATE properties
@@ -236,14 +252,31 @@ def update_property(property_id):
         return jsonify({"error": str(e)}), 500
 
 
-# ---------------------------
-# DELETE PROPERTY (SOFT DELETE)
-# ---------------------------
 @property_api.route("/delete_property/<int:property_id>", methods=["DELETE"])
 def delete_property(property_id):
     try:
+        data = request.get_json()
+        user_id = data.get("user_id")
+
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
+
+        # Day-21 — ownership check
+        cursor.execute(
+            "SELECT user_id FROM properties WHERE id = %s",
+            (property_id,),
+        )
+        row = cursor.fetchone()
+
+        if not row:
+            cursor.close()
+            conn.close()
+            return jsonify({"error": "Property not found"}), 404
+
+        if row["user_id"] != user_id:
+            cursor.close()
+            conn.close()
+            return jsonify({"error": "You are not allowed to delete this property"}), 403
 
         # Day-19 + Day-20 — soft delete with updated_at
         cursor.execute(
