@@ -24,7 +24,7 @@ def add_property_image(property_id, image_path, is_primary=False):
         INSERT INTO property_images (property_id, image_path, is_primary)
         VALUES (%s, %s, %s)
         """,
-        (property_id, image_path, is_primary)
+        (property_id, image_path, is_primary),
     )
 
     conn.commit()
@@ -54,13 +54,12 @@ def add_property():
             INSERT INTO properties (title, price, location, description, user_id)
             VALUES (%s, %s, %s, %s, %s)
             """,
-            (title, price, location, description, user_id)
+            (title, price, location, description, user_id),
         )
         conn.commit()
 
         property_id = cursor.lastrowid
 
-        # ✅ Track saved images
         saved_images = []
 
         if "images" in request.files:
@@ -77,18 +76,18 @@ def add_property():
                     add_property_image(
                         property_id,
                         image_path,
-                        is_primary=False
+                        is_primary=False,
                     )
 
                     saved_images.append(image_path)
 
-        # ✅ Day‑16 Micro‑step A: enforce at least one image
+        # Day-16 Micro-step A
         if len(saved_images) == 0:
             cursor.close()
             conn.close()
             return jsonify({"error": "At least one property image is required"}), 400
 
-        # ✅ Day‑16 Micro‑step B: auto‑assign primary image
+        # Day-16 Micro-step B
         cursor.execute(
             """
             UPDATE property_images
@@ -97,7 +96,7 @@ def add_property():
             ORDER BY display_order ASC, id ASC
             LIMIT 1
             """,
-            (property_id,)
+            (property_id,),
         )
         conn.commit()
 
@@ -111,7 +110,7 @@ def add_property():
 
 
 # ---------------------------
-# GET PROPERTIES BY USER (WITH THUMBNAIL)
+# GET PROPERTIES BY USER
 # ---------------------------
 @property_api.route("/get_properties/<int:user_id>", methods=["GET"])
 def get_properties(user_id):
@@ -130,7 +129,7 @@ def get_properties(user_id):
             WHERE p.user_id = %s
             ORDER BY p.id DESC
             """,
-            (user_id,)
+            (user_id,),
         )
 
         properties = cursor.fetchall()
@@ -145,7 +144,7 @@ def get_properties(user_id):
 
 
 # ---------------------------
-# GET SINGLE PROPERTY (WITH IMAGE GALLERY)
+# GET SINGLE PROPERTY
 # ---------------------------
 @property_api.route("/get_property/<int:property_id>", methods=["GET"])
 def get_property(property_id):
@@ -155,7 +154,7 @@ def get_property(property_id):
 
         cursor.execute(
             "SELECT * FROM properties WHERE id = %s",
-            (property_id,)
+            (property_id,),
         )
         property_data = cursor.fetchone()
 
@@ -169,7 +168,7 @@ def get_property(property_id):
             WHERE property_id = %s
             ORDER BY display_order ASC, id ASC
             """,
-            (property_id,)
+            (property_id,),
         )
         images = cursor.fetchall()
 
@@ -198,15 +197,28 @@ def update_property(property_id):
         description = data.get("description")
 
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
 
+        # Day-17 Micro-step C
+        cursor.execute(
+            "SELECT status FROM properties WHERE id = %s",
+            (property_id,),
+        )
+        status = cursor.fetchone()["status"]
+
+        if status != "available":
+            cursor.close()
+            conn.close()
+            return jsonify({"error": "Only available properties can be edited"}), 400
+
+        cursor = conn.cursor()
         cursor.execute(
             """
             UPDATE properties
             SET title=%s, price=%s, location=%s, description=%s
             WHERE id=%s
             """,
-            (title, price, location, description, property_id)
+            (title, price, location, description, property_id),
         )
 
         conn.commit()
@@ -219,42 +231,44 @@ def update_property(property_id):
         return jsonify({"error": str(e)}), 500
 
 
+# ---------------------------
+# DELETE PROPERTY IMAGE
+# ---------------------------
 @property_api.route("/delete_property_image/<int:image_id>", methods=["DELETE"])
 def delete_property_image(image_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Get property_id of the image
         cursor.execute(
             "SELECT property_id FROM property_images WHERE id = %s",
-            (image_id,)
+            (image_id,),
         )
         image = cursor.fetchone()
+
         if not image:
             return jsonify({"error": "Image not found"}), 404
 
         property_id = image["property_id"]
 
-        # Count images for this property
         cursor.execute(
             "SELECT COUNT(*) AS count FROM property_images WHERE property_id = %s",
-            (property_id,)
+            (property_id,),
         )
         image_count = cursor.fetchone()["count"]
 
         if image_count <= 1:
             return jsonify({"error": "A property must have at least one image"}), 400
 
-        # Safe to delete
         cursor.execute(
             "DELETE FROM property_images WHERE id = %s",
-            (image_id,)
+            (image_id,),
         )
         conn.commit()
 
         cursor.close()
         conn.close()
+
         return jsonify({"message": "Image deleted successfully"})
 
     except Exception as e:
