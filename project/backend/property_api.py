@@ -176,26 +176,23 @@ def get_property(property_id):
 
 
 # ---------------------------
-# UPDATE PROPERTY
+# UPDATE PROPERTY STATUS (Day-22)
 # ---------------------------
-@property_api.route("/update_property/<int:property_id>", methods=["PUT"])
-def update_property(property_id):
+@property_api.route("/update_property_status/<int:property_id>", methods=["POST"])
+def update_property_status(property_id):
     try:
         data = request.get_json()
-
-        title = data.get("title")
-        price = data.get("price")
-        location = data.get("location")
-        description = data.get("description")
         new_status = data.get("status")
-        user_id = data.get("user_id")  # needed for Day-21
+        user_id = data.get("user_id")
+
+        if new_status not in ["available", "sold", "rented"]:
+            return jsonify({"error": "Invalid status"}), 400
 
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Fetch current status + owner
         cursor.execute(
-            "SELECT status, user_id FROM properties WHERE id = %s",
+            "SELECT user_id, status FROM properties WHERE id = %s",
             (property_id,),
         )
         row = cursor.fetchone()
@@ -205,20 +202,13 @@ def update_property(property_id):
             conn.close()
             return jsonify({"error": "Property not found"}), 404
 
-        current_status = row["status"]
-        owner_id = row["user_id"]
-
         # Day-21 — ownership check
-        if owner_id != user_id:
+        if row["user_id"] != user_id:
             cursor.close()
             conn.close()
-            return jsonify({"error": "You are not allowed to edit this property"}), 403
+            return jsonify({"error": "You are not allowed to change this property status"}), 403
 
-        # Day-17 — block edits if not available
-        if current_status != "available":
-            cursor.close()
-            conn.close()
-            return jsonify({"error": "Only available properties can be edited"}), 400
+        current_status = row["status"]
 
         # Day-18 — prevent revert
         if current_status in ["sold", "rented"] and new_status == "available":
@@ -228,30 +218,23 @@ def update_property(property_id):
                 {"error": "Completed properties cannot be reverted to available"}
             ), 400
 
-        # Perform update
         cursor.execute(
-            """
-            UPDATE properties
-            SET title=%s,
-                price=%s,
-                location=%s,
-                description=%s,
-                status=%s
-            WHERE id=%s
-            """,
-            (title, price, location, description, new_status, property_id),
+            "UPDATE properties SET status = %s WHERE id = %s",
+            (new_status, property_id),
         )
-
         conn.commit()
+
         cursor.close()
         conn.close()
 
-        return jsonify({"message": "Property updated successfully!"})
+        return jsonify({"message": "Property status updated successfully"})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
+# ---------------------------
+# DELETE PROPERTY
+# ---------------------------
 @property_api.route("/delete_property/<int:property_id>", methods=["DELETE"])
 def delete_property(property_id):
     try:
