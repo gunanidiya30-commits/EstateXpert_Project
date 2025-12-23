@@ -8,8 +8,12 @@ property_api = Blueprint("property_api", __name__)
 UPLOAD_FOLDER = "backend/uploads"
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 
+# ---------------------------
+# HELPERS
+# ---------------------------
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 def add_property_image(property_id, image_path, is_primary=False):
     conn = get_db_connection()
@@ -28,6 +32,7 @@ def add_property_image(property_id, image_path, is_primary=False):
     conn.close()
 
 
+# ---------------------------
 # ADD PROPERTY
 # ---------------------------
 @property_api.route("/add_property", methods=["POST"])
@@ -55,15 +60,16 @@ def add_property():
 
         property_id = cursor.lastrowid
 
+        # ✅ Track saved images
+        saved_images = []
+
         if "images" in request.files:
             images = request.files.getlist("images")
 
-            for index, image in enumerate(images):
+            for image in images:
                 if image and allowed_file(image.filename):
                     filename = secure_filename(image.filename)
-
-                    image_path = f"/uploads/{filename}"
-
+                    save_path = os.path.join(UPLOAD_FOLDER, filename)
                     image.save(save_path)
 
                     image_path = f"/uploads/{filename}"
@@ -71,8 +77,29 @@ def add_property():
                     add_property_image(
                         property_id,
                         image_path,
-                        is_primary=(index == 0)
+                        is_primary=False
                     )
+
+                    saved_images.append(image_path)
+
+        # ✅ Day‑16 Micro‑step A: enforce at least one image
+        if len(saved_images) == 0:
+            cursor.close()
+            conn.close()
+            return jsonify({"error": "At least one property image is required"}), 400
+
+        # ✅ Day‑16 Micro‑step B: auto‑assign primary image
+        cursor.execute(
+            """
+            UPDATE property_images
+            SET is_primary = 1
+            WHERE property_id = %s
+            ORDER BY display_order ASC, id ASC
+            LIMIT 1
+            """,
+            (property_id,)
+        )
+        conn.commit()
 
         cursor.close()
         conn.close()
@@ -81,6 +108,7 @@ def add_property():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # ---------------------------
 # GET PROPERTIES BY USER (WITH THUMBNAIL)
@@ -91,8 +119,9 @@ def get_properties(user_id):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        cursor.execute("""
-            SELECT 
+        cursor.execute(
+            """
+            SELECT
                 p.*,
                 pi.image_path AS thumbnail
             FROM properties p
@@ -100,7 +129,9 @@ def get_properties(user_id):
                 ON p.id = pi.property_id AND pi.is_primary = TRUE
             WHERE p.user_id = %s
             ORDER BY p.id DESC
-        """, (user_id,))
+            """,
+            (user_id,)
+        )
 
         properties = cursor.fetchall()
 
@@ -112,6 +143,7 @@ def get_properties(user_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 # ---------------------------
 # GET SINGLE PROPERTY (WITH IMAGE GALLERY)
 # ---------------------------
@@ -122,22 +154,21 @@ def get_property(property_id):
         cursor = conn.cursor(dictionary=True)
 
         cursor.execute(
-    """
-    SELECT image_path
-    FROM property_images
-    WHERE property_id = %s
-    ORDER BY display_order ASC, id ASC
-    """,
-    (property_id,)
-)
-
+            "SELECT * FROM properties WHERE id = %s",
+            (property_id,)
+        )
         property_data = cursor.fetchone()
 
         if not property_data:
             return jsonify({"error": "Property not found"}), 404
 
         cursor.execute(
-            "SELECT image_path FROM property_images WHERE property_id = %s",
+            """
+            SELECT image_path
+            FROM property_images
+            WHERE property_id = %s
+            ORDER BY display_order ASC, id ASC
+            """,
             (property_id,)
         )
         images = cursor.fetchall()
@@ -151,6 +182,7 @@ def get_property(property_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # ---------------------------
 # UPDATE PROPERTY
@@ -168,17 +200,62 @@ def update_property(property_id):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE properties
             SET title=%s, price=%s, location=%s, description=%s
             WHERE id=%s
-        """, (title, price, location, description, property_id))
+            """,
+            (title, price, location, description, property_id)
+        )
 
         conn.commit()
         cursor.close()
         conn.close()
 
         return jsonify({"message": "Property updated successfully!"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@property_api.route("/delete_property_image/<int:image_id>", methods=["DELETE"])
+def delete_property_image(image_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get property_id of the image
+        cursor.execute(
+            "SELECT property_id FROM property_images WHERE id = %s",
+            (image_id,)
+        )
+        image = cursor.fetchone()
+        if not image:
+            return jsonify({"error": "Image not found"}), 404
+
+        property_id = image["property_id"]
+
+        # Count images for this property
+        cursor.execute(
+            "SELECT COUNT(*) AS count FROM property_images WHERE property_id = %s",
+            (property_id,)
+        )
+        image_count = cursor.fetchone()["count"]
+
+        if image_count <= 1:
+            return jsonify({"error": "A property must have at least one image"}), 400
+
+        # Safe to delete
+        cursor.execute(
+            "DELETE FROM property_images WHERE id = %s",
+            (image_id,)
+        )
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+        return jsonify({"message": "Image deleted successfully"})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
