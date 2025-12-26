@@ -5,6 +5,10 @@ from backend.db import get_db_connection
 from backend.api.users_api import users_api
 from backend.api.auth_api import auth_bp
 from backend.property_api import property_api
+from backend.locality_api import locality_api
+from backend.facility_api import facility_api
+from backend.nearby_api import nearby_api
+from backend.score_api import score_api
 from flask import send_from_directory
 
 from flask_cors import CORS
@@ -56,6 +60,12 @@ def uploaded_file(filename):
 app.register_blueprint(users_api, url_prefix="/api")
 app.register_blueprint(auth_bp)              # correct
 app.register_blueprint(property_api)         # keep this
+app.register_blueprint(locality_api)
+app.register_blueprint(facility_api)
+app.register_blueprint(nearby_api)
+app.register_blueprint(score_api)
+
+
 
 
 

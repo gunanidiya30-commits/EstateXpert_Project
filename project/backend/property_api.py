@@ -173,6 +173,7 @@ def get_property(property_id):
     except Exception:
         return jsonify({"error": "Failed to fetch property"}), 500
 
+
 # ---------------------------
 # UPDATE PROPERTY STATUS (Day‑22)
 # ---------------------------
@@ -297,3 +298,5 @@ def admin_get_all_properties():
 
     except Exception:
         return jsonify({"error": "Failed to fetch admin data"}), 500
+
+

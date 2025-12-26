@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>EstateXpert — Locality Map</title>
+
+    <!-- Leaflet CSS -->
+    <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+  const map = L.map("map").setView([19.0760, 72.8777], 11);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap contributors"
+  }).addTo(map);
+
+  const facilityMarkers = [];
+
+  function clearFacilities() {
+    facilityMarkers.forEach(m => map.removeLayer(m));
+    facilityMarkers.length = 0;
+  }
+
+  function getColor(color) {
+    switch (color) {
+      case "green": return "green";
+      case "light-green": return "#7CFC00";
+      case "orange": return "orange";
+      case "red": return "red";
+      default: return "blue";
+    }
+  }
+
+  fetch("http://127.0.0.1:5000/get_localities")
+    .then(res => res.json())
+    .then(localities => {
+      localities.forEach(loc => {
+
+        fetch(`http://127.0.0.1:5000/get_locality_score/${loc.locality_id}`)
+          .then(res => res.json())
+          .then(scoreData => {
+
+            const marker = L.circleMarker(
+              [loc.latitude, loc.longitude],
+              {
+                radius: 10,
+                color: getColor(scoreData.color),
+                fillOpacity: 0.8
+              }
+            ).addTo(map);
+
+            marker.bindPopup(`
+              <strong>${loc.locality_name}</strong><br>
+              City: ${loc.city}<br><br>
+
+              <strong>Score:</strong> ${scoreData.score}<br>
+              <strong>Band:</strong> ${scoreData.band}<br>
+              <em>${scoreData.explanation}</em><br><br>
+
+              <button onclick="loadFacilities(${loc.locality_id})">
+                Show Nearby Facilities
+              </button>
+            `);
+          });
+      });
+    });
+
+  function loadFacilities(localityId) {
+    clearFacilities();
+
+    fetch(`http://127.0.0.1:5000/get_nearby_facilities/${localityId}`)
+      .then(res => res.json())
+      .then(facilities => {
+        facilities.forEach(f => {
+          const icon = L.icon({
+            iconUrl:
+              f.type === "school"
+                ? "https://cdn-icons-png.flaticon.com/512/167/167707.png"
+                : f.type === "hospital"
+                ? "https://cdn-icons-png.flaticon.com/512/2967/2967350.png"
+                : "https://cdn-icons-png.flaticon.com/512/61/61231.png",
+            iconSize: [25, 25]
+          });
+
+          const m = L.marker([f.latitude, f.longitude], { icon }).addTo(map);
+          m.bindPopup(`
+            <strong>${f.name}</strong><br>
+            Type: ${f.type}<br>
+            Distance: ${f.distance_km} km
+          `);
+
+          facilityMarkers.push(m);
+        });
+      });
+  }
+</script>
+
+
+
+</body>
+</html>
