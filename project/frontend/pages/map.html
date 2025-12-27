@@ -1,32 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>EstateXpert — Locality Map</title>
+  <meta charset="UTF-8" />
+  <title>EstateXpert — Locality Map</title>
 
-    <!-- Leaflet CSS -->
-    <link
+  <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-/>
+  />
 
-
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-        }
-        #map {
-            width: 100%;
-            height: 100vh;
-        }
-    </style>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      width: 100%;
+      height: 100vh;
+    }
+  </style>
 </head>
 <body>
 
 <div id="map"></div>
 
-<!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
@@ -44,29 +41,30 @@
   }
 
   function getColor(color) {
-    switch (color) {
-      case "green": return "green";
-      case "light-green": return "#7CFC00";
-      case "orange": return "orange";
-      case "red": return "red";
-      default: return "blue";
-    }
+    if (color === "green") return "green";
+    if (color === "light-green") return "#7CFC00";
+    if (color === "orange") return "orange";
+    if (color === "red") return "red";
+    return "blue";
   }
 
+  // Load localities
   fetch("http://127.0.0.1:5000/get_localities")
     .then(res => res.json())
     .then(localities => {
       localities.forEach(loc => {
 
+        if (!loc.locality_id) return;
+
         fetch(`http://127.0.0.1:5000/get_locality_score/${loc.locality_id}`)
           .then(res => res.json())
-          .then(scoreData => {
+          .then(score => {
 
             const marker = L.circleMarker(
               [loc.latitude, loc.longitude],
               {
                 radius: 10,
-                color: getColor(scoreData.color),
+                color: getColor(score.color),
                 fillOpacity: 0.8
               }
             ).addTo(map);
@@ -75,9 +73,9 @@
               <strong>${loc.locality_name}</strong><br>
               City: ${loc.city}<br><br>
 
-              <strong>Score:</strong> ${scoreData.score}<br>
-              <strong>Band:</strong> ${scoreData.band}<br>
-              <em>${scoreData.explanation}</em><br><br>
+              <strong>Score:</strong> ${score.score}<br>
+              <strong>Band:</strong> ${score.band}<br>
+              <em>${score.explanation}</em><br><br>
 
               <button onclick="loadFacilities(${loc.locality_id})">
                 Show Nearby Facilities
@@ -87,37 +85,45 @@
       });
     });
 
+  // Load nearby facilities
   function loadFacilities(localityId) {
     clearFacilities();
 
     fetch(`http://127.0.0.1:5000/get_nearby_facilities/${localityId}`)
       .then(res => res.json())
-      .then(facilities => {
+      .then(data => {
+
+        const facilities = data.facilities; // ✅ FIXED
+
         facilities.forEach(f => {
+          const iconUrl =
+            f.type === "school"
+              ? "https://cdn-icons-png.flaticon.com/512/167/167707.png"
+              : f.type === "hospital"
+              ? "https://cdn-icons-png.flaticon.com/512/2967/2967350.png"
+              : "https://cdn-icons-png.flaticon.com/512/61/61231.png";
+
           const icon = L.icon({
-            iconUrl:
-              f.type === "school"
-                ? "https://cdn-icons-png.flaticon.com/512/167/167707.png"
-                : f.type === "hospital"
-                ? "https://cdn-icons-png.flaticon.com/512/2967/2967350.png"
-                : "https://cdn-icons-png.flaticon.com/512/61/61231.png",
+            iconUrl,
             iconSize: [25, 25]
           });
 
           const m = L.marker([f.latitude, f.longitude], { icon }).addTo(map);
+
           m.bindPopup(`
             <strong>${f.name}</strong><br>
             Type: ${f.type}<br>
-            Distance: ${f.distance_km} km
+            Distance: ${f.distance_km} km<br>
+            Travel Time: ${f.travel_time_min} min
           `);
 
           facilityMarkers.push(m);
         });
+
+        console.log("Facility score:", data.facility_score);
       });
   }
 </script>
-
-
 
 </body>
 </html>
