@@ -40,49 +40,37 @@
     facilityMarkers.length = 0;
   }
 
-  function getColor(color) {
-    if (color === "green") return "green";
-    if (color === "light-green") return "#7CFC00";
-    if (color === "orange") return "orange";
-    if (color === "red") return "red";
-    return "blue";
+  function getColor(score) {
+    if (score >= 8) return "green";
+    if (score >= 6) return "lightgreen";
+    if (score >= 4) return "orange";
+    return "red";
   }
 
-  // Load localities
-  fetch("http://127.0.0.1:5000/get_localities")
+  // ✅ Load SINGLE locality (object, not array)
+  fetch("http://127.0.0.1:5000/get_locality_score/1")
     .then(res => res.json())
-    .then(localities => {
-      localities.forEach(loc => {
+    .then(loc => {
 
-        if (!loc.locality_id) return;
+      const marker = L.circleMarker(
+        [19.0760, 72.8777], // temporary coords
+        {
+          radius: 10,
+          color: getColor(loc.final_locality_score),
+          fillOpacity: 0.8
+        }
+      ).addTo(map);
 
-        fetch(`http://127.0.0.1:5000/get_locality_score/${loc.locality_id}`)
-          .then(res => res.json())
-          .then(score => {
+      marker.bindPopup(`
+        <strong>${loc.locality_name}</strong><br><br>
+        <strong>Base Score:</strong> ${loc.base_locality_score}<br>
+        <strong>Facility Score:</strong> ${loc.facility_score}<br>
+        <strong>Final Score:</strong> ${loc.final_locality_score}<br><br>
 
-            const marker = L.circleMarker(
-              [loc.latitude, loc.longitude],
-              {
-                radius: 10,
-                color: getColor(score.color),
-                fillOpacity: 0.8
-              }
-            ).addTo(map);
-
-            marker.bindPopup(`
-              <strong>${loc.locality_name}</strong><br>
-              City: ${loc.city}<br><br>
-
-              <strong>Score:</strong> ${score.score}<br>
-              <strong>Band:</strong> ${score.band}<br>
-              <em>${score.explanation}</em><br><br>
-
-              <button onclick="loadFacilities(${loc.locality_id})">
-                Show Nearby Facilities
-              </button>
-            `);
-          });
-      });
+        <button onclick="loadFacilities(${loc.locality_id})">
+          Show Nearby Facilities
+        </button>
+      `);
     });
 
   // Load nearby facilities
@@ -93,7 +81,7 @@
       .then(res => res.json())
       .then(data => {
 
-        const facilities = data.facilities; // ✅ FIXED
+        const facilities = data.facilities;
 
         facilities.forEach(f => {
           const iconUrl =
@@ -114,7 +102,8 @@
             <strong>${f.name}</strong><br>
             Type: ${f.type}<br>
             Distance: ${f.distance_km} km<br>
-            Travel Time: ${f.travel_time_min} min
+            Travel Time: ${f.travel_time_min} min<br>
+            Weighted Score: ${f.weighted_score}
           `);
 
           facilityMarkers.push(m);
