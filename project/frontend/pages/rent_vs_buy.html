@@ -55,18 +55,26 @@
 
     <hr class="my-4">
 
-    <div id="rentBuyResult"class="alert alert-info mt-3">
+    <!-- FIXED: space between id and class -->
+    <div id="recommendationExplanation" class="alert alert-secondary mt-3" style="display:none;">
         <p><strong>Total Rent Paid:</strong> —</p>
         <p><strong>Future Property Value:</strong> —</p>
         <p><strong>Recommendation:</strong> —</p>
     </div>
 
-    <div id="recommendationExplanation"
-     class="alert alert-secondary mt-3"
-     style="display:none;">
-    <h6>Why this recommendation?</h6>
-    <p id="recommendationText" class="mb-0"></p>
+    <div class="text-muted mt-2">
+    <small>
+        <span class="text-success">Green</span> = Cost‑effective choice &nbsp;|&nbsp;
+        <span class="text-warning">Orange</span> = More flexible option
+    </small>
 </div>
+
+    <div id="recommendationExplanation"
+         class="alert alert-secondary mt-3"
+         style="display:none;">
+        <h6>Why this recommendation?</h6>
+        <p id="recommendationText" class="mb-0"></p>
+    </div>
 
 </div>
 
@@ -86,9 +94,7 @@ document.getElementById("rentBuyForm").addEventListener("submit", function (e) {
 
     fetch("http://127.0.0.1:5000/rent_vs_buy", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
     })
     .then(response => response.json())
@@ -99,28 +105,25 @@ document.getElementById("rentBuyForm").addEventListener("submit", function (e) {
         }
 
         document.getElementById("rentBuyResult").innerHTML = `
-    <p class="fs-5">
-    <strong>Recommendation:</strong>
-    <span class="text-success">${data.recommendation}</span>
-</p>
-    <p><strong>Future Property Value:</strong> ₹ ${data.future_property_value}</p>
-    <p><strong>Recommendation:</strong> ${data.recommendation}</p>
-`;
+            <p class="fs-5">
+                <strong>Recommendation:</strong>
+                <span class="fw-bold text-success">${data.recommendation}</span>
+            </p>
+            <p><strong>Future Property Value:</strong> ₹ ${data.future_property_value}</p>
+        `;
 
-const explanationDiv = document.getElementById("recommendationExplanation");
-const explanationText = document.getElementById("recommendationText");
+        const explanationDiv = document.getElementById("recommendationExplanation");
+        const explanationText = document.getElementById("recommendationText");
 
-if (data.recommendation === "BUY") {
-    explanationText.innerText =
-        "Buying is recommended because your total buying cost is lower than the total rent cost over the selected period. This makes buying more cost‑effective in the long term.";
-} else {
-    explanationText.innerText =
-        "Renting is recommended because your total rent cost is lower than the total buying cost for the selected duration, helping you save money and stay flexible.";
-}
+        if (data.recommendation === "BUY") {
+            explanationText.innerText =
+                "Buying is recommended because your total buying cost is lower than the total rent cost over the selected period. This makes buying more cost‑effective in the long term.";
+        } else {
+            explanationText.innerText =
+                "Renting is recommended because your total rent cost is lower than the total buying cost for the selected duration, helping you save money and stay flexible.";
+        }
 
-
-explanationDiv.style.display = "block";
-
+        explanationDiv.style.display = "block";
     })
     .catch(error => {
         console.error(error);
