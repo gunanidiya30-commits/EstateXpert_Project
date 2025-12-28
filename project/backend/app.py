@@ -9,6 +9,10 @@ from backend.locality_api import locality_api
 from backend.facility_api import facility_api
 from backend.nearby_api import nearby_api
 from backend.score_api import score_api
+from backend.emi_api import emi_api
+from backend.rent_vs_buy_api import rent_vs_buy_api
+from backend.roi_loan_api import roi_loan_api
+
 from flask import send_from_directory
 
 from flask_cors import CORS
@@ -64,6 +68,9 @@ app.register_blueprint(locality_api)
 app.register_blueprint(facility_api)
 app.register_blueprint(nearby_api)
 app.register_blueprint(score_api)
+app.register_blueprint(emi_api)
+app.register_blueprint(rent_vs_buy_api)
+app.register_blueprint(roi_loan_api)
 
 
 
