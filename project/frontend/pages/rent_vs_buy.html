@@ -55,11 +55,19 @@
 
     <hr class="my-4">
 
-    <div id="rentBuyResult">
+    <div id="rentBuyResult"class="alert alert-info mt-3">
         <p><strong>Total Rent Paid:</strong> —</p>
         <p><strong>Future Property Value:</strong> —</p>
         <p><strong>Recommendation:</strong> —</p>
     </div>
+
+    <div id="recommendationExplanation"
+     class="alert alert-secondary mt-3"
+     style="display:none;">
+    <h6>Why this recommendation?</h6>
+    <p id="recommendationText" class="mb-0"></p>
+</div>
+
 </div>
 
 <script>
@@ -91,10 +99,28 @@ document.getElementById("rentBuyForm").addEventListener("submit", function (e) {
         }
 
         document.getElementById("rentBuyResult").innerHTML = `
-            <p><strong>Total Rent Paid:</strong> ₹ ${data.total_rent_paid}</p>
-            <p><strong>Future Property Value:</strong> ₹ ${data.future_property_value}</p>
-            <p><strong>Recommendation:</strong> ${data.recommendation}</p>
-        `;
+    <p class="fs-5">
+    <strong>Recommendation:</strong>
+    <span class="text-success">${data.recommendation}</span>
+</p>
+    <p><strong>Future Property Value:</strong> ₹ ${data.future_property_value}</p>
+    <p><strong>Recommendation:</strong> ${data.recommendation}</p>
+`;
+
+const explanationDiv = document.getElementById("recommendationExplanation");
+const explanationText = document.getElementById("recommendationText");
+
+if (data.recommendation === "BUY") {
+    explanationText.innerText =
+        "Buying is recommended because your total buying cost is lower than the total rent cost over the selected period. This makes buying more cost‑effective in the long term.";
+} else {
+    explanationText.innerText =
+        "Renting is recommended because your total rent cost is lower than the total buying cost for the selected duration, helping you save money and stay flexible.";
+}
+
+
+explanationDiv.style.display = "block";
+
     })
     .catch(error => {
         console.error(error);

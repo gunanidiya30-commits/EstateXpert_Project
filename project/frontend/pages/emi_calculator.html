@@ -25,6 +25,8 @@
             <label class="form-label">Tenure (Years)</label>
             <input type="number" class="form-control" id="tenureYears" required>
         </div>
+        
+        <div id="emiError" class="text-danger mb-2"></div>
 
         <button type="submit" class="btn btn-primary">
             Calculate EMI
@@ -33,12 +35,29 @@
 
     <hr class="my-4">
 
-    <div id="emiResult">
+    <div id="emiResult"class="alert alert-info mt-3">
         <p><strong>Monthly EMI:</strong> —</p>
         <p><strong>Total Interest:</strong> —</p>
         <p><strong>Total Payment:</strong> —</p>
     </div>
+
+    <hr class="my-4">
+
+<h5>EMI Breakdown</h5>
+<p class="text-muted mb-2">
+    This chart shows how your total loan payment is split between
+    <strong>principal repayment</strong> and <strong>interest cost</strong>.
+</p>
+<canvas id="emiChart" width="400" height="300"></canvas>
+
+<p class="mt-3 text-muted">
+    <strong>Note:</strong> Monthly EMI is calculated using both principal and interest.
+    Higher interest rates increase the interest portion over time.
+</p>
+
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
 document.getElementById("emiForm").addEventListener("submit", function (e) {
@@ -47,6 +66,18 @@ document.getElementById("emiForm").addEventListener("submit", function (e) {
     const loanAmount = document.getElementById("loanAmount").value;
     const interestRate = document.getElementById("interestRate").value;
     const tenureYears = document.getElementById("tenureYears").value;
+
+        const errorDiv = document.getElementById("emiError");
+errorDiv.innerText = "";
+
+if (
+    loanAmount === "" || interestRate === "" || tenureYears === "" ||
+    loanAmount <= 0 || interestRate <= 0 || tenureYears <= 0
+) {
+    errorDiv.innerText = "Please enter valid positive values for all fields.";
+    return;
+}
+
 
     fetch("http://127.0.0.1:5000/calculate_emi", {
         method: "POST",
@@ -67,10 +98,42 @@ document.getElementById("emiForm").addEventListener("submit", function (e) {
         }
 
         document.getElementById("emiResult").innerHTML = `
-            <p><strong>Monthly EMI:</strong> ₹ ${data.monthly_emi}</p>
-            <p><strong>Total Interest:</strong> ₹ ${data.total_interest}</p>
-            <p><strong>Total Payment:</strong> ₹ ${data.total_payment}</p>
-        `;
+    <p class="fs-5">
+    <strong>Monthly EMI:</strong>
+    <span class="text-primary">₹ ${data.monthly_emi}</span>
+</p>
+    <p><strong>Total Interest:</strong> ₹ ${data.total_interest}</p>
+    <p><strong>Total Payment:</strong> ₹ ${data.total_payment}</p>
+`;
+
+const ctx = document.getElementById("emiChart").getContext("2d");
+
+if (window.emiChartInstance) {
+    window.emiChartInstance.destroy();
+}
+
+window.emiChartInstance = new Chart(ctx, {
+    type: "pie",
+    data: {
+        labels: ["Principal Amount", "Total Interest"],
+        datasets: [{
+            data: [
+                data.total_payment - data.total_interest,
+                data.total_interest
+            ],
+            backgroundColor: ["#4CAF50", "#FF7043"]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: "bottom"
+            }
+        }
+    }
+});
+
     })
     .catch(error => {
         console.error("Error:", error);
