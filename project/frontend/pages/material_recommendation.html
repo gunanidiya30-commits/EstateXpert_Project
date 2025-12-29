@@ -14,6 +14,7 @@
         </div>
 
         <div class="card-body">
+
             <div class="mb-3">
                 <label class="form-label">Construction Grade</label>
                 <select id="grade" class="form-select">
@@ -44,6 +45,46 @@
                     <tbody id="materialsTable"></tbody>
                 </table>
             </div>
+
+            <!-- E4-B: Material Alternative Comparison -->
+            <div class="card mt-4 shadow d-none" id="comparisonCard">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0">Material Alternative Comparison</h6>
+                </div>
+
+                <div class="card-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">Select Base Material</label>
+                        <select id="baseMaterialSelect" class="form-select">
+                            <option value="">Select material</option>
+                            <option value="Cement">Cement</option>
+                            <option value="Bricks">Bricks</option>
+                            <option value="Steel">Steel</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-outline-primary w-100" onclick="loadMaterialComparison()">
+                        Compare Alternatives
+                    </button>
+
+                    <div class="mt-4 d-none" id="comparisonSection">
+                        <table class="table table-bordered text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Alternative</th>
+                                    <th>Cost Index</th>
+                                    <th>Durability</th>
+                                    <th>Recommendation</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comparisonTable"></tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -81,6 +122,55 @@ function getMaterials() {
         });
 
         document.getElementById("result").classList.remove("d-none");
+
+        // 🔑 REQUIRED FIX — show comparison section
+        document.getElementById("comparisonCard").classList.remove("d-none");
+    });
+}
+
+// E4-B — Material Alternative Comparison
+function loadMaterialComparison() {
+    const baseMaterial = document.getElementById("baseMaterialSelect").value;
+
+    if (!baseMaterial) {
+        alert("Please select a base material");
+        return;
+    }
+
+    fetch("http://localhost:5000/api/material-comparison", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base_material: baseMaterial })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const table = document.getElementById("comparisonTable");
+        table.innerHTML = "";
+
+        data.alternatives.forEach(item => {
+            let badge = "secondary";
+
+            if (item.recommendation_tag.includes("Budget")) {
+                badge = "success";
+            } else if (item.recommendation_tag.includes("Longevity")) {
+                badge = "primary";
+            }
+
+            table.innerHTML += `
+                <tr>
+                    <td>${item.alternative_material}</td>
+                    <td>${item.cost_index}</td>
+                    <td>${item.durability_score}</td>
+                    <td>
+                        <span class="badge bg-${badge}">
+                            ${item.recommendation_tag}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        });
+
+        document.getElementById("comparisonSection").classList.remove("d-none");
     });
 }
 </script>

@@ -39,6 +39,18 @@
 
                 <ul class="list-group mt-3" id="detailsList"></ul>
             </div>
+
+
+            <!-- E4-C: Land Improvement Suggestions -->
+<div id="improvementSection" class="card mt-4 shadow d-none">
+    <div class="card-header bg-warning">
+        <h6 class="mb-0">Land Improvement Suggestions</h6>
+    </div>
+    <div class="card-body">
+        <ul id="improvementList" class="mb-0"></ul>
+    </div>
+</div>
+
         </div>
     </div>
 </div>
@@ -78,9 +90,42 @@ function checkSuitability() {
                     ${item.status} — ${item.message}
                 </li>
             `;
-        });
+       
+       // E4-C: Trigger improvement suggestions ONLY on FAIL
+if (data.overall_result === "FAIL") {
+    const failedRules = data.details
+        .filter(item => item.status === "FAIL")
+        .map(item => item.rule);
+
+    loadLandImprovements(failedRules);
+}
+ });
 
         document.getElementById("result").classList.remove("d-none");
+    });
+}
+
+// E4-C — Fetch land improvement suggestions
+function loadLandImprovements(failedRules) {
+    fetch("http://localhost:5000/api/land-improvements", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            failed_rules: failedRules
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const list = document.getElementById("improvementList");
+        list.innerHTML = "";
+
+        data.suggestions.forEach(item => {
+            list.innerHTML += `<li>${item}</li>`;
+        });
+
+        document.getElementById("improvementSection").classList.remove("d-none");
     });
 }
 </script>

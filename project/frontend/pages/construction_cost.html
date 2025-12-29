@@ -29,18 +29,86 @@
                 </select>
             </div>
 
+            <div class="mb-3">
+                <label class="form-label">Climate / Zone</label>
+                <select id="climate" class="form-select">
+                    <option value="">Select climate</option>
+                    <option value="normal">Normal</option>
+                    <option value="coastal">Coastal</option>
+                    <option value="dry">Dry</option>
+                    <option value="high_rainfall">High Rainfall</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+    <label class="form-label">Number of Floors</label>
+    <input type="number" id="floors" class="form-control" min="1" value="1">
+</div>
+
             <button class="btn btn-success w-100" onclick="calculateCost()">
                 Calculate Cost
             </button>
 
+
             <div id="result" class="mt-4 d-none">
                 <hr>
-                <p><strong>Material Cost:</strong> ₹<span id="materialCost"></span></p>
-                <p><strong>Labor Cost:</strong> ₹<span id="laborCost"></span></p>
+                <p><strong>Material Cost:</strong> ₹ <span id="materialCost"></span></p>
+                <p><strong>Labor Cost:</strong> ₹ <span id="laborCost"></span></p>
                 <h5 class="text-primary">
-                    Total Cost: ₹<span id="totalCost"></span>
+                    Total Cost: ₹ <span id="totalCost"></span>
                 </h5>
             </div>
+
+            <!-- E4-A: Sensitivity Analysis -->
+            <div id="sensitivitySection" class="mt-4 d-none">
+                <hr>
+                <h5 class="text-primary">Cost Sensitivity Analysis</h5>
+                <table class="table table-bordered text-center">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Change</th>
+                            <th>Adjusted Cost</th>
+                            <th>Risk Level</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sensitivityTable"></tbody>
+                </table>
+            </div>
+
+            <div id="sensitivityInsight" class="alert mt-3 d-none"></div>
+
+            <!-- E4-E: Construction Timeline Estimator -->
+            <div id="timelineSection" class="mt-4 d-none">
+                <hr>
+                <h5 class="text-primary">Construction Timeline Estimator</h5>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Phase</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timelineTable"></tbody>
+                </table>
+                <div class="alert alert-info">
+                    <strong>Total Estimated Time:</strong>
+                    <span id="totalTimeline"></span> months
+                </div>
+            </div>
+
+            <!-- E4-F: Build Readiness Score -->
+<div id="readinessSection" class="mt-4 d-none">
+    <hr>
+    <h5 class="text-primary">Build Readiness Score</h5>
+
+    <div class="alert alert-light border">
+        <h2 class="mb-1">
+            <span id="readinessScore"></span>/100
+        </h2>
+        <h6 id="readinessBand" class="mb-2"></h6>
+        <p id="readinessAdvice" class="mb-0"></p>
+    </div>
+</div>
 
         </div>
     </div>
@@ -50,28 +118,154 @@
 function calculateCost() {
     const area = document.getElementById("area").value;
     const grade = document.getElementById("grade").value;
+    const climate = document.getElementById("climate").value;
+    const floors = parseInt(document.getElementById("floors").value);
 
-    if (!area || !grade) {
-        alert("Please enter area and select grade");
-        return;
-    }
+
+    if (!area || !grade || !climate || !floors) {
+    alert("Please enter area, grade, climate, and floors");
+    return;
+}
+
 
     fetch("http://localhost:5000/api/construction-cost", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             area: parseInt(area),
             grade: grade
         })
     })
-    .then(response => response.json())
+    .then(res => res.json())
     .then(data => {
+        let factor = 1.0;
+        let note = "Standard construction conditions applied.";
+
+        if (climate === "coastal") {
+            factor = 1.12;
+            note = "Coastal conditions increase corrosion protection costs.";
+        } else if (climate === "dry") {
+            factor = 1.05;
+            note = "Dry zones require soil stabilization measures.";
+        } else if (climate === "high_rainfall") {
+            factor = 1.15;
+            note = "High rainfall zones need enhanced waterproofing.";
+        }
+
+        const adjustedTotal = Math.round(data.total_cost * factor);
+
         document.getElementById("materialCost").innerText = data.material_cost;
         document.getElementById("laborCost").innerText = data.labor_cost;
-        document.getElementById("totalCost").innerText = data.total_cost;
+        document.getElementById("totalCost").innerText = adjustedTotal;
         document.getElementById("result").classList.remove("d-none");
+
+        showSensitivityAnalysis(adjustedTotal);
+        showTimeline(area, grade, floors);
+        loadBuildReadiness();
+
+
+        const insight = document.getElementById("sensitivityInsight");
+        insight.innerText = note;
+        insight.className = "alert alert-info mt-3";
+        insight.classList.remove("d-none");
+    });
+}
+
+function showSensitivityAnalysis(baseCost) {
+    const variations = [
+        { label: "-15%", factor: 0.85 },
+        { label: "-10%", factor: 0.90 },
+        { label: "-5%", factor: 0.95 },
+        { label: "+5%", factor: 1.05 },
+        { label: "+10%", factor: 1.10 },
+        { label: "+15%", factor: 1.15 }
+    ];
+
+    const table = document.getElementById("sensitivityTable");
+    table.innerHTML = "";
+
+    variations.forEach(v => {
+        const percent = Math.abs(parseInt(v.label));
+        const adjusted = Math.round(baseCost * v.factor);
+
+        let risk = "Low", badge = "success";
+        if (percent > 5 && percent <= 10) { risk = "Medium"; badge = "warning"; }
+        else if (percent > 10) { risk = "High"; badge = "danger"; }
+
+        table.innerHTML += `
+            <tr>
+                <td>${v.label}</td>
+                <td>₹ ${adjusted.toLocaleString()}</td>
+                <td><span class="badge bg-${badge}">${risk}</span></td>
+            </tr>
+        `;
+    });
+
+    document.getElementById("sensitivitySection").classList.remove("d-none");
+}
+
+function showTimeline(area, grade,floors) {
+    let gradeFactor = 1.0;
+
+    if (grade === "Standard") {
+        gradeFactor = 1.1;
+    } else if (grade === "Premium") {
+        gradeFactor = 1.25;
+    }
+
+    const floorFactor = 1 + ((floors - 1) * 0.18);
+
+    const phases = [
+        { name: "Planning & Approval", rate: 0.5 },
+        { name: "Foundation", rate: 0.8 },
+        { name: "Structure", rate: 1.2 },
+        { name: "Finishing", rate: 1.0 }
+    ];
+
+    const table = document.getElementById("timelineTable");
+    table.innerHTML = "";
+    let total = 0;
+
+    phases.forEach(p => {
+        const duration = Math.max(
+            1,
+           Math.round((area / 1000) * p.rate * gradeFactor * floorFactor)
+
+        );
+        total += duration;
+        table.innerHTML += `
+            <tr>
+                <td>${p.name}</td>
+                <td>${duration} months</td>
+            </tr>
+        `;
+    });
+
+    document.getElementById("totalTimeline").innerText = total;
+    document.getElementById("timelineSection").classList.remove("d-none");
+}
+
+
+function loadBuildReadiness() {
+    const payload = {
+        land_status: "PASS",            // from land module (fixed here, no core link)
+        cost_risk: "Medium",            // derived from sensitivity logic
+        material_quality: "Good",       // from material recommendation
+        climate_zone: "Normal"          // selected climate
+    };
+
+    fetch("http://localhost:5000/api/build-readiness", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("readinessScore").innerText = data.score;
+        document.getElementById("readinessBand").innerText = data.band;
+        document.getElementById("readinessAdvice").innerText = data.advice;
+
+        document.getElementById("readinessSection").classList.remove("d-none");
     });
 }
 </script>

@@ -15,7 +15,11 @@ from backend.roi_loan_api import roi_loan_api
 from backend.construction_cost_api import construction_cost_api
 from backend.material_recommendation_api import material_recommendation_api
 from backend.land_suitability_api import land_suitability_api
-
+from backend.material_comparison_api import material_comparison_api
+from backend.land_improvement_api import land_improvement_api
+from backend.climate_adjustment_api import climate_adjustment_api
+from backend.timeline_estimator_api import timeline_estimator_api
+from backend.build_readiness_api import build_readiness_api
 
 from flask import send_from_directory
 
@@ -78,7 +82,11 @@ app.register_blueprint(roi_loan_api)
 app.register_blueprint(construction_cost_api)
 app.register_blueprint(material_recommendation_api)
 app.register_blueprint(land_suitability_api)
-
+app.register_blueprint(material_comparison_api)
+app.register_blueprint(land_improvement_api)
+app.register_blueprint(climate_adjustment_api)
+app.register_blueprint(timeline_estimator_api)
+app.register_blueprint(build_readiness_api)
 
 if __name__ == "__main__":
     app.run(debug=True)
