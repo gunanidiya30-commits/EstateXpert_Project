@@ -20,6 +20,9 @@ from backend.land_improvement_api import land_improvement_api
 from backend.climate_adjustment_api import climate_adjustment_api
 from backend.timeline_estimator_api import timeline_estimator_api
 from backend.build_readiness_api import build_readiness_api
+from backend.interior_templates_api import interior_templates_api
+from backend.color_palette_api import color_palette_api
+from backend.interior_budget_api import interior_budget_api
 
 from flask import send_from_directory
 
@@ -87,6 +90,9 @@ app.register_blueprint(land_improvement_api)
 app.register_blueprint(climate_adjustment_api)
 app.register_blueprint(timeline_estimator_api)
 app.register_blueprint(build_readiness_api)
+app.register_blueprint(interior_templates_api)
+app.register_blueprint(color_palette_api)
+app.register_blueprint(interior_budget_api)
 
 if __name__ == "__main__":
     app.run(debug=True)

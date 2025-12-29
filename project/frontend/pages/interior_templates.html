@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Interior Design Templates</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <h4 class="mb-4 text-primary">Interior Design Templates</h4>
+
+    <div class="row" id="templateContainer"></div>
+</div>
+
+<script>
+fetch("http://localhost:5000/api/interior-templates")
+    .then(response => response.json())
+    .then(data => {
+        const container = document.getElementById("templateContainer");
+
+        data.forEach(t => {
+            container.innerHTML += `
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow-sm h-100">
+                        <img src="${t.image_path}" class="card-img-top" alt="Interior Template">
+                        <div class="card-body">
+                            <h5 class="card-title">${t.template_name}</h5>
+                            <p class="card-text">
+                                <strong>Style:</strong> ${t.style_tag}<br>
+                                <strong>Budget:</strong> ₹${t.min_budget.toLocaleString()} – ₹${t.max_budget.toLocaleString()}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    });
+</script>
+
+</body>
+</html>
