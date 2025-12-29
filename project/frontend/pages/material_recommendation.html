@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Material Recommendation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">Construction Material Recommendation</h5>
+        </div>
+
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Construction Grade</label>
+                <select id="grade" class="form-select">
+                    <option value="">Select grade</option>
+                    <option value="Basic">Basic</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Premium">Premium</option>
+                </select>
+            </div>
+
+            <button class="btn btn-primary w-100" onclick="getMaterials()">
+                Get Recommendation
+            </button>
+
+            <div id="result" class="mt-4 d-none">
+                <hr>
+                <p class="fw-bold" id="reasonText"></p>
+
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Material</th>
+                            <th>Category</th>
+                            <th>Quality</th>
+                            <th>Recommended For</th>
+                        </tr>
+                    </thead>
+                    <tbody id="materialsTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function getMaterials() {
+    const grade = document.getElementById("grade").value;
+
+    if (!grade) {
+        alert("Please select a construction grade");
+        return;
+    }
+
+    fetch("http://localhost:5000/api/material-recommendation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grade: grade })
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById("reasonText").innerText = data.reason;
+
+        const tableBody = document.getElementById("materialsTable");
+        tableBody.innerHTML = "";
+
+        data.materials.forEach(item => {
+            tableBody.innerHTML += `
+                <tr>
+                    <td>${item.material_name}</td>
+                    <td>${item.category}</td>
+                    <td>${item.quality_grade}</td>
+                    <td>${item.recommended_for}</td>
+                </tr>
+            `;
+        });
+
+        document.getElementById("result").classList.remove("d-none");
+    });
+}
+</script>
+
+</body>
+</html>

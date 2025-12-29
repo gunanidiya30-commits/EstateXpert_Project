@@ -3,43 +3,42 @@ from backend.db import get_db_connection
 
 construction_cost_api = Blueprint("construction_cost_api", __name__)
 
-@construction_cost_api.route("/calculate_construction_cost", methods=["POST"])
+@construction_cost_api.route("/api/construction-cost", methods=["POST"])
 def calculate_construction_cost():
     data = request.get_json()
 
-    area_sqft = int(data.get("area_sqft"))
-    grade = data.get("construction_grade")
+    area = data.get("area")
+    grade = data.get("grade")
 
-    # cost per sqft based on grade
-    rate_map = {
-        "basic": 1200,
-        "standard": 1800,
-        "premium": 2500
-    }
-
-    if grade not in rate_map:
-        return jsonify({"error": "Invalid construction grade"}), 400
-
-    total_cost = area_sqft * rate_map[grade]
-    material_cost = total_cost * 0.6
-    labor_cost = total_cost * 0.4
+    if not area or not grade:
+        return jsonify({"error": "Area and grade are required"}), 400
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("""
-        INSERT INTO construction_cost_estimates
-        (area_sqft, construction_grade, material_cost, labor_cost, total_cost)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (area_sqft, grade, material_cost, labor_cost, total_cost))
+    cursor.execute(
+        """
+        SELECT material_cost_per_sqft, labor_cost_per_sqft
+        FROM construction_cost_rates
+        WHERE grade = %s
+        """,
+        (grade,)
+    )
 
-    conn.commit()
+    rate = cursor.fetchone()
     cursor.close()
     conn.close()
 
+    if not rate:
+        return jsonify({"error": "Invalid construction grade"}), 400
+
+    material_cost = rate["material_cost_per_sqft"] * area
+    labor_cost = rate["labor_cost_per_sqft"] * area
+    total_cost = material_cost + labor_cost
+
     return jsonify({
-        "area_sqft": area_sqft,
-        "construction_grade": grade,
+        "area_sqft": area,
+        "grade": grade,
         "material_cost": material_cost,
         "labor_cost": labor_cost,
         "total_cost": total_cost

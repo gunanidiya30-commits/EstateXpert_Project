@@ -13,6 +13,10 @@ from backend.emi_api import emi_api
 from backend.rent_vs_buy_api import rent_vs_buy_api
 from backend.roi_loan_api import roi_loan_api
 from backend.construction_cost_api import construction_cost_api
+from backend.material_recommendation_api import material_recommendation_api
+from backend.land_suitability_api import land_suitability_api
+
+
 from flask import send_from_directory
 
 from flask_cors import CORS
@@ -72,8 +76,8 @@ app.register_blueprint(emi_api)
 app.register_blueprint(rent_vs_buy_api)
 app.register_blueprint(roi_loan_api)
 app.register_blueprint(construction_cost_api)
-
-
+app.register_blueprint(material_recommendation_api)
+app.register_blueprint(land_suitability_api)
 
 
 if __name__ == "__main__":

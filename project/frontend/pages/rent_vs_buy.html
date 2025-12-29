@@ -55,20 +55,18 @@
 
     <hr class="my-4">
 
-    <!-- FIXED: space between id and class -->
-    <div id="recommendationExplanation" class="alert alert-secondary mt-3" style="display:none;">
-        <p><strong>Total Rent Paid:</strong> —</p>
-        <p><strong>Future Property Value:</strong> —</p>
-        <p><strong>Recommendation:</strong> —</p>
+    <!-- ✅ FIX 1: Result container added -->
+    <div id="rentBuyResult" class="mt-3"></div>
+
+    <!-- Legend -->
+    <div class="text-muted mt-2">
+        <small>
+            <span class="text-success">Green</span> = Cost‑effective choice &nbsp;|&nbsp;
+            <span class="text-warning">Orange</span> = More flexible option
+        </small>
     </div>
 
-    <div class="text-muted mt-2">
-    <small>
-        <span class="text-success">Green</span> = Cost‑effective choice &nbsp;|&nbsp;
-        <span class="text-warning">Orange</span> = More flexible option
-    </small>
-</div>
-
+    <!-- ✅ FIX 2: Single explanation block (unique ID) -->
     <div id="recommendationExplanation"
          class="alert alert-secondary mt-3"
          style="display:none;">
@@ -107,7 +105,11 @@ document.getElementById("rentBuyForm").addEventListener("submit", function (e) {
         document.getElementById("rentBuyResult").innerHTML = `
             <p class="fs-5">
                 <strong>Recommendation:</strong>
-                <span class="fw-bold text-success">${data.recommendation}</span>
+                <span class="fw-bold ${
+                    data.recommendation === "BUY" ? "text-success" : "text-warning"
+                }">
+                    ${data.recommendation}
+                </span>
             </p>
             <p><strong>Future Property Value:</strong> ₹ ${data.future_property_value}</p>
         `;
